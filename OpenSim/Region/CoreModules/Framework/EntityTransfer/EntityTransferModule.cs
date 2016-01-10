@@ -800,7 +800,8 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
             int oldSizeY = (int)sourceRegion.RegionSizeY;
             int newSizeX = finalDestination.RegionSizeX;
             int newSizeY = finalDestination.RegionSizeY;
-            bool OutSideViewRange = NeedsNewAgent((uint)sp.Scene.DefaultDrawDistance, oldRegionX, newRegionX, oldRegionY, newRegionY,
+
+            bool OutSideViewRange = NeedsNewAgent(sp.DrawDistance, oldRegionX, newRegionX, oldRegionY, newRegionY,
                 oldSizeX, oldSizeY, newSizeX, newSizeY);
 
             if (OutSideViewRange)
@@ -2448,16 +2449,25 @@ namespace OpenSim.Region.CoreModules.Framework.EntityTransfer
             // view to include everything in the megaregion
             if (m_regionCombinerModule == null || !m_regionCombinerModule.IsRootForMegaregion(Scene.RegionInfo.RegionID))
             {
-                // The area to check is as big as the current region.
-                // We presume all adjacent regions are the same size as this region.
-                uint dd = Math.Max((uint)avatar.Scene.DefaultDrawDistance,
-                                Math.Max(Scene.RegionInfo.RegionSizeX, Scene.RegionInfo.RegionSizeY));
+                uint dd = (uint)avatar.DrawDistance;
 
-                uint startX = Util.RegionToWorldLoc(pRegionLocX) - dd + Constants.RegionSize/2;
-                uint startY = Util.RegionToWorldLoc(pRegionLocY) - dd + Constants.RegionSize/2;
+                // until avatar movement updates client connections, we need to seend at least this current region imediate Neighbors
+                uint ddX = Math.Max(dd, Constants.RegionSize);
+                uint ddY = Math.Max(dd, Constants.RegionSize);
 
-                uint endX = Util.RegionToWorldLoc(pRegionLocX) + dd + Constants.RegionSize/2;
-                uint endY = Util.RegionToWorldLoc(pRegionLocY) + dd + Constants.RegionSize/2;
+                ddX--;
+                ddY--;
+
+                // reference to region edges. Should be avatar position
+                uint startX = Util.RegionToWorldLoc(pRegionLocX);
+                uint endX = startX + m_regionInfo.RegionSizeX;
+                uint startY = Util.RegionToWorldLoc(pRegionLocY);
+                uint endY = startY + m_regionInfo.RegionSizeY;
+
+                startX -= ddX;
+                startY -= ddY;
+                endX += ddX;
+                endY += ddY;
 
                 neighbours
                     = avatar.Scene.GridService.GetRegionRange(
