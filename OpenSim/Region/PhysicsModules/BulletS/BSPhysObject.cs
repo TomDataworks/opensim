@@ -239,8 +239,10 @@ public abstract class BSPhysObject : PhysicsActor
     public virtual OMV.Vector3 RawVelocity { get; set; }
     public abstract OMV.Vector3 ForceVelocity { get; set; }
 
+    // RawForce is a constant force applied to object (see Force { set; } )
     public OMV.Vector3 RawForce { get; set; }
     public OMV.Vector3 RawTorque { get; set; }
+
     public override void AddAngularForce(OMV.Vector3 force, bool pushforce)
     {
         AddAngularForce(force, pushforce, false);
@@ -461,11 +463,15 @@ public abstract class BSPhysObject : PhysicsActor
         bool ret = false;
 
         // if 'collidee' is null, that means it is terrain
-        uint collideeLocalID = (collidee == null) ? PhysScene.TerrainManager.HighestTerrainID : collidee.LocalID;
+        uint collideeLocalID = (collidee == null) ? BSScene.TERRAIN_ID : collidee.LocalID;
+        // All terrain goes by the TERRAIN_ID id when passed up as a collision
+        if (collideeLocalID <= PhysScene.TerrainManager.HighestTerrainID) {
+            collideeLocalID = BSScene.TERRAIN_ID;
+        }
 
         // The following lines make IsColliding(), CollidingGround() and CollidingObj work
         CollidingStep = PhysScene.SimulationStep;
-        if (collideeLocalID <= PhysScene.TerrainManager.HighestTerrainID)
+        if (collideeLocalID == BSScene.TERRAIN_ID)
         {
             CollidingGroundStep = PhysScene.SimulationStep;
         }
@@ -570,7 +576,11 @@ public abstract class BSPhysObject : PhysicsActor
             PhysScene.TaintedObject(LocalID, TypeName+".SubscribeEvents", delegate()
             {
                 if (PhysBody.HasPhysicalBody)
+                {
                     CurrentCollisionFlags = PhysScene.PE.AddToCollisionFlags(PhysBody, CollisionFlags.BS_SUBSCRIBE_COLLISION_EVENTS);
+                    DetailLog("{0},{1}.SubscribeEvents,setting collision. ms={2}, collisionFlags={3:x}",
+                            LocalID, TypeName, ms, CurrentCollisionFlags);
+                }
             });
         }
         else
