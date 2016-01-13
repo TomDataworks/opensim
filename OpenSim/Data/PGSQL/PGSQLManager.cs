@@ -251,7 +251,7 @@ namespace OpenSim.Data.PGSQL
             }
             if (PGFieldType == "double precision")
             {
-                return Convert.ToDouble(value);
+                return (Double)value;
             }
             return CreateParameterValue(value);
         }
