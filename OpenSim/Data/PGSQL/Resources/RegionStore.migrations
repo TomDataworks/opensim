@@ -1153,10 +1153,39 @@ ALTER TABLE regionwindlight ALTER COLUMN draw_classic_clouds SET DEFAULT FALSE;
 
 COMMIT;
 
-VERSION 41       #-- Change Landlags to bigint
+:VERSION 41       #-- Change Landlags to bigint
 
 BEGIN TRANSACTION;
 
 ALTER TABLE land ALTER "LandFlags" TYPE bigint;
+
+COMMIT;
+
+:VERSION 42
+
+BEGIN TRANSACTION;
+
+CREATE TABLE regionextra(
+        "RegionID" char(36) NOT NULL PRIMARY KEY,
+        "Name" varchar(32) NOT NULL,
+        "value" TEXT
+);
+
+ALTER TABLE prims ADD COLUMN "KeyframeMotion" bytea;
+
+ALTER TABLE prims ADD COLUMN "AttachedPosX" double precision not null default 0.0;
+ALTER TABLE prims ADD COLUMN "AttachedPosY" double precision not null default 0.0;
+ALTER TABLE prims ADD COLUMN "AttachedPosZ" double precision not null default 0.0;
+ALTER TABLE primshapes ADD COLUMN "LastAttachPoint" int NOT NULL default '0';
+
+ALTER TABLE prims ADD COLUMN "PassCollisions" boolean NOT NULL default false;
+ALTER TABLE prims ADD COLUMN "Vehicle" TEXT default NULL;
+ALTER TABLE regionsettings ADD COLUMN "block_search" boolean NOT NULL default false;
+ALTER TABLE regionsettings ADD COLUMN "casino" boolean NOT NULL default false;
+ALTER TABLE land ADD COLUMN "SeeAVs" boolean NOT NULL default true;
+ALTER TABLE land ADD COLUMN "AnyAVSounds" boolean NOT NULL default true;
+ALTER TABLE land ADD COLUMN "GroupAVSounds" boolean NOT NULL default true;
+
+ALTER TABLE prims ADD COLUMN "RotationAxisLocks" boolean NOT NULL default false;
 
 COMMIT;

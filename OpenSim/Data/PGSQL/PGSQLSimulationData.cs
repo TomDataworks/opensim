@@ -349,9 +349,9 @@ namespace OpenSim.Data.PGSQL
             ""CameraAtOffsetY"" = :CameraAtOffsetY, ""CameraAtOffsetZ"" = :CameraAtOffsetZ, ""ForceMouselook"" = :ForceMouselook, 
             ""ScriptAccessPin"" = :ScriptAccessPin, ""AllowedDrop"" = :AllowedDrop, ""DieAtEdge"" = :DieAtEdge, ""SalePrice"" = :SalePrice, 
             ""SaleType"" = :SaleType, ""ColorR"" = :ColorR, ""ColorG"" = :ColorG, ""ColorB"" = :ColorB, ""ColorA"" = :ColorA, ""ParticleSystem"" = :ParticleSystem, 
-            ""ClickAction"" = :ClickAction, ""Material"" = :Material, ""CollisionSound"" = :CollisionSound, ""CollisionSoundVolume"" = :CollisionSoundVolume, ""PassTouches"" = :PassTouches,
-            ""LinkNumber"" = :LinkNumber, ""MediaURL"" = :MediaURL, ""DynAttrs"" = :DynAttrs,
-            ""PhysicsShapeType"" = :PhysicsShapeType, ""Density"" = :Density, ""GravityModifier"" = :GravityModifier, ""Friction"" = :Friction, ""Restitution"" = :Restitution
+            ""ClickAction"" = :ClickAction, ""Material"" = :Material, ""CollisionSound"" = :CollisionSound, ""CollisionSoundVolume"" = :CollisionSoundVolume, ""PassTouches"" = :PassTouches, ""PassCollisions"" = :PassCollisions,
+            ""LinkNumber"" = :LinkNumber, ""MediaURL"" = :MediaURL, ""KeyframeMotion"" = :KeyframeMotion, ""AttachedPosX"" = :AttachedPosX, ""AttachedPosY"" = :AttachedPosY, ""AttachedPosZ"" = :AttachedPosZ, ""DynAttrs"" = :DynAttrs,
+            ""PhysicsShapeType"" = :PhysicsShapeType, ""Density"" = :Density, ""GravityModifier"" = :GravityModifier, ""Friction"" = :Friction, ""Restitution"" = :Restitution, ""Vehicle"" = :Vehicle, ""RotationAxisLocks"" = :RotationAxisLocks
         WHERE ""UUID"" = :UUID ;
 
         INSERT INTO 
@@ -364,8 +364,9 @@ namespace OpenSim.Data.PGSQL
             ""PayPrice"", ""PayButton1"", ""PayButton2"", ""PayButton3"", ""PayButton4"", ""LoopedSound"", ""LoopedSoundGain"", ""TextureAnimation"", ""OmegaX"", 
             ""OmegaY"", ""OmegaZ"", ""CameraEyeOffsetX"", ""CameraEyeOffsetY"", ""CameraEyeOffsetZ"", ""CameraAtOffsetX"", ""CameraAtOffsetY"", ""CameraAtOffsetZ"", 
             ""ForceMouselook"", ""ScriptAccessPin"", ""AllowedDrop"", ""DieAtEdge"", ""SalePrice"", ""SaleType"", ""ColorR"", ""ColorG"", ""ColorB"", ""ColorA"", 
-            ""ParticleSystem"", ""ClickAction"", ""Material"", ""CollisionSound"", ""CollisionSoundVolume"", ""PassTouches"", ""LinkNumber"", ""MediaURL"", ""DynAttrs"",
-            ""PhysicsShapeType"", ""Density"", ""GravityModifier"", ""Friction"", ""Restitution""
+            ""ParticleSystem"", ""ClickAction"", ""Material"", ""CollisionSound"", ""CollisionSoundVolume"", ""PassTouches"", ""PassCollisions"", ""LinkNumber"",
+            ""MediaURL"", ""KeyframeMotion"", ""AttachedPosX"", ""AttachedPosY"", ""AttachedPosZ"", ""DynAttrs"",
+            ""PhysicsShapeType"", ""Density"", ""GravityModifier"", ""Friction"", ""Restitution"", ""Vehicle"", ""RotationAxisLocks""
             ) Select 
             :UUID, :CreationDate, :Name, :Text, :Description, :SitName, :TouchName, :ObjectFlags, :OwnerMask, :NextOwnerMask, :GroupMask, 
             :EveryoneMask, :BaseMask, :PositionX, :PositionY, :PositionZ, :GroupPositionX, :GroupPositionY, :GroupPositionZ, :VelocityX, 
@@ -375,8 +376,9 @@ namespace OpenSim.Data.PGSQL
             :PayPrice, :PayButton1, :PayButton2, :PayButton3, :PayButton4, :LoopedSound, :LoopedSoundGain, :TextureAnimation, :OmegaX, 
             :OmegaY, :OmegaZ, :CameraEyeOffsetX, :CameraEyeOffsetY, :CameraEyeOffsetZ, :CameraAtOffsetX, :CameraAtOffsetY, :CameraAtOffsetZ, 
             :ForceMouselook, :ScriptAccessPin, :AllowedDrop, :DieAtEdge, :SalePrice, :SaleType, :ColorR, :ColorG, :ColorB, :ColorA, 
-            :ParticleSystem, :ClickAction, :Material, :CollisionSound, :CollisionSoundVolume, :PassTouches, :LinkNumber, :MediaURL, :DynAttrs,
-            :PhysicsShapeType, :Density, :GravityModifier, :Friction, :Restitution
+            :ParticleSystem, :ClickAction, :Material, :CollisionSound, :CollisionSoundVolume, :PassTouches, :PassCollisions, :LinkNumber,
+            :MediaURL, :KeyframeMotion, :AttachedPosX, :AttachedPosY, :AttachedPosZ, :DynAttrs,
+            :PhysicsShapeType, :Density, :GravityModifier, :Friction, :Restitution, :Vehicle, :RotationAxisLocks
             where not EXISTS (SELECT ""UUID"" FROM prims WHERE ""UUID"" = :UUID);
         ";
 
@@ -407,19 +409,19 @@ namespace OpenSim.Data.PGSQL
             ""PathSkew"" = :PathSkew, ""PathCurve"" = :PathCurve, ""PathRadiusOffset"" = :PathRadiusOffset, ""PathRevolutions"" = :PathRevolutions, 
             ""PathTaperX"" = :PathTaperX, ""PathTaperY"" = :PathTaperY, ""PathTwist"" = :PathTwist, ""PathTwistBegin"" = :PathTwistBegin, 
             ""ProfileBegin"" = :ProfileBegin, ""ProfileEnd"" = :ProfileEnd, ""ProfileCurve"" = :ProfileCurve, ""ProfileHollow"" = :ProfileHollow, 
-            ""Texture"" = :Texture, ""ExtraParams"" = :ExtraParams, ""State"" = :State, ""Media"" = :Media
+            ""Texture"" = :Texture, ""ExtraParams"" = :ExtraParams, ""State"" = :State, ""LastAttachPoint"" = :LastAttachPoint, ""Media"" = :Media
         WHERE ""UUID"" = :UUID ;
 
         INSERT INTO 
             primshapes (
             ""UUID"", ""Shape"", ""ScaleX"", ""ScaleY"", ""ScaleZ"", ""PCode"", ""PathBegin"", ""PathEnd"", ""PathScaleX"", ""PathScaleY"", ""PathShearX"", ""PathShearY"", 
             ""PathSkew"", ""PathCurve"", ""PathRadiusOffset"", ""PathRevolutions"", ""PathTaperX"", ""PathTaperY"", ""PathTwist"", ""PathTwistBegin"", ""ProfileBegin"", 
-            ""ProfileEnd"", ""ProfileCurve"", ""ProfileHollow"", ""Texture"", ""ExtraParams"", ""State"", ""Media""
+            ""ProfileEnd"", ""ProfileCurve"", ""ProfileHollow"", ""Texture"", ""ExtraParams"", ""State"", ""LastAttachPoint"", ""Media""
             ) 
             Select
             :UUID, :Shape, :ScaleX, :ScaleY, :ScaleZ, :PCode, :PathBegin, :PathEnd, :PathScaleX, :PathScaleY, :PathShearX, :PathShearY, 
             :PathSkew, :PathCurve, :PathRadiusOffset, :PathRevolutions, :PathTaperX, :PathTaperY, :PathTwist, :PathTwistBegin, :ProfileBegin, 
-            :ProfileEnd, :ProfileCurve, :ProfileHollow, :Texture, :ExtraParams, :State, :Media
+            :ProfileEnd, :ProfileCurve, :ProfileHollow, :Texture, :ExtraParams, :State, :LastAttachPoint, :Media
         where not EXISTS (SELECT ""UUID"" FROM primshapes WHERE ""UUID"" = :UUID);
         ";
 
@@ -683,11 +685,11 @@ namespace OpenSim.Data.PGSQL
             string sql = @"INSERT INTO land
                 (""UUID"",""RegionUUID"",""LocalLandID"",""Bitmap"",""Name"",""Description"",""OwnerUUID"",""IsGroupOwned"",""Area"",""AuctionID"",""Category"",""ClaimDate"",""ClaimPrice"",
                  ""GroupUUID"",""SalePrice"",""LandStatus"",""LandFlags"",""LandingType"",""MediaAutoScale"",""MediaTextureUUID"",""MediaURL"",""MusicURL"",""PassHours"",""PassPrice"",
-                 ""SnapshotUUID"",""UserLocationX"",""UserLocationY"",""UserLocationZ"",""UserLookAtX"",""UserLookAtY"",""UserLookAtZ"",""AuthbuyerID"",""OtherCleanTime"")
+                 ""SnapshotUUID"",""UserLocationX"",""UserLocationY"",""UserLocationZ"",""UserLookAtX"",""UserLookAtY"",""UserLookAtZ"",""AuthbuyerID"",""OtherCleanTime"",""Dwell"",""MediaType"",""MediaDescription"",""MediaSize"",""MediaLoop"",""ObscureMusic"",""ObscureMedia"",""SeeAVs"",""AnyAVSounds"",""GroupAVSounds"")
                 VALUES
                 (:UUID,:RegionUUID,:LocalLandID,:Bitmap,:Name,:Description,:OwnerUUID,:IsGroupOwned,:Area,:AuctionID,:Category,:ClaimDate,:ClaimPrice,
                  :GroupUUID,:SalePrice,:LandStatus,:LandFlags,:LandingType,:MediaAutoScale,:MediaTextureUUID,:MediaURL,:MusicURL,:PassHours,:PassPrice,
-                 :SnapshotUUID,:UserLocationX,:UserLocationY,:UserLocationZ,:UserLookAtX,:UserLookAtY,:UserLookAtZ,:AuthbuyerID,:OtherCleanTime)";
+                 :SnapshotUUID,:UserLocationX,:UserLocationY,:UserLocationZ,:UserLookAtX,:UserLookAtY,:UserLookAtZ,:AuthbuyerID,:OtherCleanTime,:Dwell,:MediaType,:MediaDescription,:MediaWidth||','||:MediaHeight,:MediaLoop,:ObscureMusic,:ObscureMedia,:SeeAVs,:AnyAVSounds,:GroupAVSounds)";
 
             using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn))
@@ -1346,7 +1348,7 @@ namespace OpenSim.Data.PGSQL
 ,elevation_1_sw = :elevation_1_sw ,elevation_2_sw = :elevation_2_sw ,water_height = :water_height ,terrain_raise_limit = :terrain_raise_limit 
 ,terrain_lower_limit = :terrain_lower_limit ,use_estate_sun = :use_estate_sun ,fixed_sun = :fixed_sun ,sun_position = :sun_position 
 ,covenant = :covenant ,covenant_datetime = :covenant_datetime, sunvectorx = :sunvectorx, sunvectory = :sunvectory, sunvectorz = :sunvectorz,  
-""Sandbox"" = :Sandbox, loaded_creation_datetime = :loaded_creation_datetime, loaded_creation_id = :loaded_creation_id, ""map_tile_ID"" = :TerrainImageID, 
+""Sandbox"" = :Sandbox, loaded_creation_datetime = :loaded_creation_datetime, loaded_creation_id = :loaded_creation_id, ""map_tile_ID"" = :TerrainImageID, ""block_search"" = :block_search, ""casino"" = :casino, 
 ""TelehubObject"" = :telehubobject, ""parcel_tile_ID"" = :ParcelImageID
  WHERE ""regionUUID"" = :regionUUID";
 
@@ -1380,7 +1382,7 @@ namespace OpenSim.Data.PGSQL
                                 terrain_texture_1,terrain_texture_2,terrain_texture_3,terrain_texture_4,elevation_1_nw,elevation_2_nw,elevation_1_ne,
                                 elevation_2_ne,elevation_1_se,elevation_2_se,elevation_1_sw,elevation_2_sw,water_height,terrain_raise_limit,
                                 terrain_lower_limit,use_estate_sun,fixed_sun,sun_position,covenant,covenant_datetime,sunvectorx, sunvectory, sunvectorz,
-                                ""Sandbox"", loaded_creation_datetime, loaded_creation_id
+                                ""Sandbox"", loaded_creation_datetime, loaded_creation_id,block_search,casino
                                 ) 
                             VALUES
                                 (:regionUUID,:block_terraform,:block_fly,:allow_damage,:restrict_pushing,:allow_land_resell,:allow_land_join_divide,
@@ -1388,7 +1390,7 @@ namespace OpenSim.Data.PGSQL
                                 :terrain_texture_1,:terrain_texture_2,:terrain_texture_3,:terrain_texture_4,:elevation_1_nw,:elevation_2_nw,:elevation_1_ne,
                                 :elevation_2_ne,:elevation_1_se,:elevation_2_se,:elevation_1_sw,:elevation_2_sw,:water_height,:terrain_raise_limit,
                                 :terrain_lower_limit,:use_estate_sun,:fixed_sun,:sun_position,:covenant, :covenant_datetime, :sunvectorx,:sunvectory, 
-                                :sunvectorz, :Sandbox, :loaded_creation_datetime, :loaded_creation_id )";
+                                :sunvectorz, :Sandbox, :loaded_creation_datetime, :loaded_creation_id, :block_search, :casino )";
 
             using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn))
@@ -1462,6 +1464,9 @@ namespace OpenSim.Data.PGSQL
             newSettings.ParcelImageID = new UUID((Guid)row["parcel_tile_ID"]);
             newSettings.TelehubObject = new UUID((Guid)row["TelehubObject"]);
 
+            newSettings.GodBlockSearch = Convert.ToBoolean(row["block_search"]);
+            newSettings.Casino = Convert.ToBoolean(row["casino"]);
+
             return newSettings;
         }
 
@@ -1515,6 +1520,7 @@ namespace OpenSim.Data.PGSQL
             newData.SnapshotID = new UUID((Guid)row["SnapshotUUID"]);
 
             newData.OtherCleanTime = Convert.ToInt32(row["OtherCleanTime"]);
+            newData.Dwell = Convert.ToSingle(row["Dwell"]);
 
             try
             {
@@ -1540,6 +1546,13 @@ namespace OpenSim.Data.PGSQL
             newData.MediaLoop = Convert.ToBoolean(row["MediaLoop"]);
             newData.ObscureMusic = Convert.ToBoolean(row["ObscureMusic"]);
             newData.ObscureMedia = Convert.ToBoolean(row["ObscureMedia"]);
+
+            if (!(row["SeeAVs"] is System.DBNull))
+                newData.SeeAVs = Convert.ToBoolean(row["SeeAVs"]);
+            if (!(row["AnyAVSounds"] is System.DBNull))
+                newData.AnyAVSounds = Convert.ToBoolean(row["AnyAVSounds"]);
+            if (!(row["GroupAVSounds"] is System.DBNull))
+                newData.GroupAVSounds = Convert.ToBoolean(row["GroupAVSounds"]);
 
             return newData;
         }
@@ -1692,20 +1705,53 @@ namespace OpenSim.Data.PGSQL
             prim.CollisionSoundVolume = Convert.ToSingle(primRow["CollisionSoundVolume"]);
 
             prim.PassTouches = (bool)primRow["PassTouches"];
+            prim.PassCollisions = Convert.ToBoolean(primRow["PassCollisions"]);
 
             if (!(primRow["MediaURL"] is System.DBNull))
                 prim.MediaUrl = (string)primRow["MediaURL"];
 
+            if (!(primRow["AttachedPosX"] is System.DBNull))
+            {
+                prim.AttachedPos = new Vector3(
+                    Convert.ToSingle(primRow["AttachedPosX"]),
+                    Convert.ToSingle(primRow["AttachedPosY"]),
+                    Convert.ToSingle(primRow["AttachedPosZ"])
+                );
+            }
+
             if (!(primRow["DynAttrs"] is System.DBNull) && (string)primRow["DynAttrs"] != "")
                 prim.DynAttrs = DAMap.FromXml((string)primRow["DynAttrs"]);
             else
-                prim.DynAttrs = new DAMap();             
+                prim.DynAttrs = new DAMap();          
+
+            if (!(primRow["KeyframeMotion"] is DBNull))
+            {
+                Byte[] data = (byte[])primRow["KeyframeMotion"];
+                if (data.Length > 0)
+                    prim.KeyframeMotion = KeyframeMotion.FromData(null, data);
+                else
+                    prim.KeyframeMotion = null;
+            }
+            else
+            {
+                prim.KeyframeMotion = null;
+            }
 
             prim.PhysicsShapeType = Convert.ToByte(primRow["PhysicsShapeType"]);
             prim.Density = Convert.ToSingle(primRow["Density"]);
             prim.GravityModifier = Convert.ToSingle(primRow["GravityModifier"]);
             prim.Friction = Convert.ToSingle(primRow["Friction"]);
             prim.Restitution = Convert.ToSingle(primRow["Restitution"]);
+            prim.RotationAxisLocks = Convert.ToByte(primRow["RotationAxisLocks"]);
+
+            SOPVehicle vehicle = null;
+            
+            if (primRow["Vehicle"].ToString() != String.Empty)
+            {
+                vehicle = SOPVehicle.FromXml2(primRow["Vehicle"].ToString());
+                if (vehicle != null)
+                    prim.VehicleParams = vehicle;
+            }
 
             return prim;
         }
@@ -1758,6 +1804,9 @@ namespace OpenSim.Data.PGSQL
             catch (InvalidCastException)
             {
             }
+
+            if (!(shapeRow["LastAttachPoint"] is System.DBNull))
+                baseShape.LastAttachPoint = Convert.ToByte(shapeRow["LastAttachPoint"]);
 
             if (!(shapeRow["Media"] is System.DBNull))
             {
@@ -1890,6 +1939,9 @@ namespace OpenSim.Data.PGSQL
             parameters.Add(_Database.CreateParameter("Loaded_Creation_DateTime", settings.LoadedCreationDateTime));
             parameters.Add(_Database.CreateParameter("Loaded_Creation_ID", settings.LoadedCreationID));
             parameters.Add(_Database.CreateParameter("TerrainImageID", settings.TerrainImageID));
+            parameters.Add(_Database.CreateParameter("block_search", settings.GodBlockSearch));
+            parameters.Add(_Database.CreateParameter("casino", settings.Casino));
+
             parameters.Add(_Database.CreateParameter("ParcelImageID", settings.ParcelImageID));
             parameters.Add(_Database.CreateParameter("TelehubObject", settings.TelehubObject));
 
@@ -1942,6 +1994,17 @@ namespace OpenSim.Data.PGSQL
             parameters.Add(_Database.CreateParameter("UserLookAtZ", land.UserLookAt.Z));
             parameters.Add(_Database.CreateParameter("AuthBuyerID", land.AuthBuyerID));
             parameters.Add(_Database.CreateParameter("OtherCleanTime", land.OtherCleanTime));
+            parameters.Add(_Database.CreateParameter("Dwell", land.Dwell));
+            parameters.Add(_Database.CreateParameter("MediaDescription", land.MediaDescription));
+            parameters.Add(_Database.CreateParameter("MediaType", land.MediaType));
+            parameters.Add(_Database.CreateParameter("MediaWidth", land.MediaWidth));
+            parameters.Add(_Database.CreateParameter("MediaHeight", land.MediaHeight));
+            parameters.Add(_Database.CreateParameter("MediaLoop", land.MediaLoop));
+            parameters.Add(_Database.CreateParameter("ObscureMusic", land.ObscureMusic));
+            parameters.Add(_Database.CreateParameter("ObscureMedia", land.ObscureMedia));
+            parameters.Add(_Database.CreateParameter("SeeAVs", land.SeeAVs));
+            parameters.Add(_Database.CreateParameter("AnyAVSounds", land.AnyAVSounds));
+            parameters.Add(_Database.CreateParameter("GroupAVSounds", land.GroupAVSounds));
 
             return parameters.ToArray();
         }
@@ -2097,9 +2160,25 @@ namespace OpenSim.Data.PGSQL
             
             parameters.Add(_Database.CreateParameter("PassTouches", prim.PassTouches));
 
+            parameters.Add(_Database.CreateParameter("PassCollisions", prim.PassCollisions));
+
             parameters.Add(_Database.CreateParameter("LinkNumber", prim.LinkNum));
             parameters.Add(_Database.CreateParameter("MediaURL", prim.MediaUrl));
+
+            parameters.Add(_Database.CreateParameter("AttachedPosX", (double)prim.AttachedPos.X));
+            parameters.Add(_Database.CreateParameter("AttachedPosY", (double)prim.AttachedPos.Y));
+            parameters.Add(_Database.CreateParameter("AttachedPosZ", (double)prim.AttachedPos.Z));
+
+            if (prim.KeyframeMotion != null)
+                parameters.Add(_Database.CreateParameter("KeyframeMotion", prim.KeyframeMotion.Serialize()));
+            else
+                parameters.Add(_Database.CreateParameter("KeyframeMotion", new Byte[0]));
             
+            if (prim.VehicleParams != null)
+                parameters.Add(_Database.CreateParameter("Vehicle", prim.VehicleParams.ToXml2()));
+            else
+                parameters.Add(_Database.CreateParameter("Vehicle", String.Empty));
+
             if (prim.DynAttrs.CountNamespaces > 0)
                 parameters.Add(_Database.CreateParameter("DynAttrs", prim.DynAttrs.ToXml()));
             else
@@ -2110,6 +2189,7 @@ namespace OpenSim.Data.PGSQL
             parameters.Add(_Database.CreateParameter("GravityModifier", (double)prim.GravityModifier));
             parameters.Add(_Database.CreateParameter("Friction", (double)prim.Friction));
             parameters.Add(_Database.CreateParameter("Restitution", (double)prim.Restitution));
+            parameters.Add(_Database.CreateParameter("RotationAxisLocks", Convert.ToBoolean(prim.RotationAxisLocks)));
 
             return parameters.ToArray();
         }
@@ -2157,6 +2237,7 @@ namespace OpenSim.Data.PGSQL
             parameters.Add(_Database.CreateParameter("Texture", s.TextureEntry));
             parameters.Add(_Database.CreateParameter("ExtraParams", s.ExtraParams));
             parameters.Add(_Database.CreateParameter("State", s.State));
+            parameters.Add(_Database.CreateParameter("LastAttachPoint", s.LastAttachPoint));
 
             if (null == s.Media)
             {
