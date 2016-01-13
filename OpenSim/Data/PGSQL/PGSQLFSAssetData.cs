@@ -97,7 +97,7 @@ namespace OpenSim.Data.PGSQL
         public AssetMetadata Get(string id, out string hash)
         {
             hash = String.Empty;
-            AssetMetadata meta = new AssetMetadata();
+            AssetMetadata meta = null;
 
             string query = String.Format("select \"id\", \"name\", \"description\", \"type\", \"hash\", \"create_time\", \"access_time\", \"asset_flags\" from {0} where \"id\" = :id", m_Table);
             using (NpgsqlConnection dbcon = new NpgsqlConnection(m_connectionString))
@@ -109,6 +109,7 @@ namespace OpenSim.Data.PGSQL
                 {
                     if (reader.Read())
                     {
+                        meta = new AssetMetadata();
                         hash = reader["hash"].ToString();
                         meta.ID = id;
                         meta.FullID = new UUID(id);
@@ -169,9 +170,9 @@ namespace OpenSim.Data.PGSQL
                     cmd.Parameters.Add(m_database.CreateParameter("id", meta.ID));
                     cmd.Parameters.Add(m_database.CreateParameter("name", meta.Name));
                     cmd.Parameters.Add(m_database.CreateParameter("description", meta.Description));
-                    cmd.Parameters.Add(m_database.CreateParameter("type", meta.Type.ToString()));
+                    cmd.Parameters.Add(m_database.CreateParameter("type", meta.Type));
                     cmd.Parameters.Add(m_database.CreateParameter("hash", hash));
-                    cmd.Parameters.Add(m_database.CreateParameter("asset_flags", meta.Flags));
+                    cmd.Parameters.Add(m_database.CreateParameter("asset_flags", Convert.ToInt32(meta.Flags)));
                     cmd.Parameters.Add(m_database.CreateParameter("create_time", now));
                     cmd.Parameters.Add(m_database.CreateParameter("access_time", now));
                     cmd.ExecuteNonQuery();

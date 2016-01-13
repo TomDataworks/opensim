@@ -364,7 +364,8 @@ namespace OpenSim.Data.PGSQL
             ""PayPrice"", ""PayButton1"", ""PayButton2"", ""PayButton3"", ""PayButton4"", ""LoopedSound"", ""LoopedSoundGain"", ""TextureAnimation"", ""OmegaX"", 
             ""OmegaY"", ""OmegaZ"", ""CameraEyeOffsetX"", ""CameraEyeOffsetY"", ""CameraEyeOffsetZ"", ""CameraAtOffsetX"", ""CameraAtOffsetY"", ""CameraAtOffsetZ"", 
             ""ForceMouselook"", ""ScriptAccessPin"", ""AllowedDrop"", ""DieAtEdge"", ""SalePrice"", ""SaleType"", ""ColorR"", ""ColorG"", ""ColorB"", ""ColorA"", 
-            ""ParticleSystem"", ""ClickAction"", ""Material"", ""CollisionSound"", ""CollisionSoundVolume"", ""PassTouches"", ""PassCollisions"", ""LinkNumber"", ""MediaURL"", ""KeyframeMotion"", ""AttachedPosX"", ""AttachedPosY"", ""AttachedPosZ"", ""DynAttrs"",
+            ""ParticleSystem"", ""ClickAction"", ""Material"", ""CollisionSound"", ""CollisionSoundVolume"", ""PassTouches"", ""PassCollisions"", ""LinkNumber"",
+            ""MediaURL"", ""KeyframeMotion"", ""AttachedPosX"", ""AttachedPosY"", ""AttachedPosZ"", ""DynAttrs"",
             ""PhysicsShapeType"", ""Density"", ""GravityModifier"", ""Friction"", ""Restitution"", ""Vehicle"", ""RotationAxisLocks""
             ) Select 
             :UUID, :CreationDate, :Name, :Text, :Description, :SitName, :TouchName, :ObjectFlags, :OwnerMask, :NextOwnerMask, :GroupMask, 
@@ -375,7 +376,8 @@ namespace OpenSim.Data.PGSQL
             :PayPrice, :PayButton1, :PayButton2, :PayButton3, :PayButton4, :LoopedSound, :LoopedSoundGain, :TextureAnimation, :OmegaX, 
             :OmegaY, :OmegaZ, :CameraEyeOffsetX, :CameraEyeOffsetY, :CameraEyeOffsetZ, :CameraAtOffsetX, :CameraAtOffsetY, :CameraAtOffsetZ, 
             :ForceMouselook, :ScriptAccessPin, :AllowedDrop, :DieAtEdge, :SalePrice, :SaleType, :ColorR, :ColorG, :ColorB, :ColorA, 
-            :ParticleSystem, :ClickAction, :Material, :CollisionSound, :CollisionSoundVolume, :PassTouches, :PassCollisions, :LinkNumber, :MediaURL, :KeyframeMotion, :DynAttrs,
+            :ParticleSystem, :ClickAction, :Material, :CollisionSound, :CollisionSoundVolume, :PassTouches, :PassCollisions, :LinkNumber,
+            :MediaURL, :KeyframeMotion, :AttachedPosX, :AttachedPosY, :AttachedPosZ, :DynAttrs,
             :PhysicsShapeType, :Density, :GravityModifier, :Friction, :Restitution, :Vehicle, :RotationAxisLocks
             where not EXISTS (SELECT ""UUID"" FROM prims WHERE ""UUID"" = :UUID);
         ";
@@ -1740,7 +1742,7 @@ namespace OpenSim.Data.PGSQL
             prim.GravityModifier = Convert.ToSingle(primRow["GravityModifier"]);
             prim.Friction = Convert.ToSingle(primRow["Friction"]);
             prim.Restitution = Convert.ToSingle(primRow["Restitution"]);
-            prim.RotationAxisLocks = (byte)Convert.ToInt32(primRow["RotationAxisLocks"].ToString());
+            prim.RotationAxisLocks = Convert.ToByte(primRow["RotationAxisLocks"]);
 
             SOPVehicle vehicle = null;
             
@@ -2187,7 +2189,7 @@ namespace OpenSim.Data.PGSQL
             parameters.Add(_Database.CreateParameter("GravityModifier", (double)prim.GravityModifier));
             parameters.Add(_Database.CreateParameter("Friction", (double)prim.Friction));
             parameters.Add(_Database.CreateParameter("Restitution", (double)prim.Restitution));
-            parameters.Add(_Database.CreateParameter("RotationAxisLocks", prim.RotationAxisLocks));
+            parameters.Add(_Database.CreateParameter("RotationAxisLocks", Convert.ToBoolean(prim.RotationAxisLocks)));
 
             return parameters.ToArray();
         }

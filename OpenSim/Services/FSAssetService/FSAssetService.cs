@@ -368,7 +368,7 @@ namespace OpenSim.Services.FSAssetService
                 }
                 if (asset == null)
                 {
-                    // m_log.InfoFormat("[FSASSETS]: Asset {0} not found", id);
+                    m_log.InfoFormat("[FSASSETS]: Asset {0} not found (fallback service)", id);
                     m_missingAssets++;
                 }
                 return asset;
@@ -393,9 +393,10 @@ namespace OpenSim.Services.FSAssetService
                             Store(asset);
                         }
                     }
-                    if (asset == null)
+                    if (asset == null) {
                         m_missingAssetsFS++;
-                    // m_log.InfoFormat("[FSASSETS]: Asset {0}, hash {1} not found in FS", id, hash);
+                        m_log.InfoFormat("[FSASSETS]: Asset {0}, hash {1} not found in FS", id, hash);
+                    }
                     else
                     {
                         // Deal with bug introduced in Oct. 20 (1eb3e6cc43e2a7b4053bc1185c7c88e22356c5e8)
