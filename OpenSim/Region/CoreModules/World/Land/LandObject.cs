@@ -341,27 +341,17 @@ namespace OpenSim.Region.CoreModules.World.Land
             else
             {
                 // Normal Calculations
-                int parcelMax = (int)( (long)LandData.Area
-                              * (long)m_scene.RegionInfo.ObjectCapacity
-                              * (long)m_scene.RegionInfo.RegionSettings.ObjectBonus
-                              / (long)(m_scene.RegionInfo.RegionSizeX * m_scene.RegionInfo.RegionSizeY) );
-                //m_log.DebugFormat("Area: {0}, Capacity {1}, Bonus {2}, Parcel {3}", LandData.Area, m_scene.RegionInfo.ObjectCapacity, m_scene.RegionInfo.RegionSettings.ObjectBonus, parcelMax);
-                return parcelMax;
-            }
-        }
+                int parcelMax = (int)(
+                                (double)LandData.Area
+                              * (double)m_scene.RegionInfo.ObjectCapacity
+                              * (double)m_scene.RegionInfo.RegionSettings.ObjectBonus
+                              / (double)(m_scene.RegionInfo.RegionSizeX * m_scene.RegionInfo.RegionSizeY)
+                              + 0.5 );
 
-        private int GetParcelBasePrimCount()
-        {
-            if (overrideParcelMaxPrimCount != null)
-            {
-                return overrideParcelMaxPrimCount(this);
-            }
-            else
-            {
-                // Normal Calculations
-                int parcelMax = (int)((long)LandData.Area
-                              * (long)m_scene.RegionInfo.ObjectCapacity
-                              / 65536L);
+                if(parcelMax > m_scene.RegionInfo.ObjectCapacity)
+                    parcelMax = m_scene.RegionInfo.ObjectCapacity;
+
+                //m_log.DebugFormat("Area: {0}, Capacity {1}, Bonus {2}, Parcel {3}", LandData.Area, m_scene.RegionInfo.ObjectCapacity, m_scene.RegionInfo.RegionSettings.ObjectBonus, parcelMax);
                 return parcelMax;
             }
         }
@@ -375,10 +365,16 @@ namespace OpenSim.Region.CoreModules.World.Land
             else
             {
                 //Normal Calculations
-                int simMax = (int)(   (long)LandData.SimwideArea
-                                    * (long)m_scene.RegionInfo.ObjectCapacity
-                                    / (long)(m_scene.RegionInfo.RegionSizeX * m_scene.RegionInfo.RegionSizeY) );
-                // m_log.DebugFormat("Simwide Area: {0}, Capacity {1}, SimMax {2}", LandData.SimwideArea, m_scene.RegionInfo.ObjectCapacity, simMax);
+                int simMax = (int)(   (double)LandData.SimwideArea
+                                    * (double)m_scene.RegionInfo.ObjectCapacity
+                                    * (double)m_scene.RegionInfo.RegionSettings.ObjectBonus
+                                    / (long)(m_scene.RegionInfo.RegionSizeX * m_scene.RegionInfo.RegionSizeY)
+                                    +0.5 );
+
+                if(simMax > m_scene.RegionInfo.ObjectCapacity)
+                    simMax = m_scene.RegionInfo.ObjectCapacity;
+                 //m_log.DebugFormat("Simwide Area: {0}, Capacity {1}, SimMax {2}, SimWidePrims {3}", 
+                 //    LandData.SimwideArea, m_scene.RegionInfo.ObjectCapacity, simMax, LandData.SimwidePrims);
                 return simMax;
             }
         }
@@ -389,6 +385,11 @@ namespace OpenSim.Region.CoreModules.World.Land
 
         public void SendLandProperties(int sequence_id, bool snap_selection, int request_result, IClientAPI remote_client)
         {
+            if(m_scene.RegionInfo.RegionSettings.AllowDamage)
+                remote_client.SceneAgent.Invulnerable = false;
+            else
+                remote_client.SceneAgent.Invulnerable = (m_landData.Flags & (uint)ParcelFlags.AllowDamage) == 0;
+
             if (remote_client.SceneAgent.PresenceType == PresenceType.Npc)
                 return;
 
@@ -416,7 +417,7 @@ namespace OpenSim.Region.CoreModules.World.Land
             remote_client.SendLandProperties(seq_id,
                     snap_selection, request_result, this,
                     (float)m_scene.RegionInfo.RegionSettings.ObjectBonus,
-                    GetParcelBasePrimCount(),
+                    GetParcelMaxPrimCount(),
                     GetSimulatorMaxPrimCount(), regionFlags);
         }
 
@@ -709,7 +710,30 @@ namespace OpenSim.Region.CoreModules.World.Land
             if (HasGroupAccess(avatar))
                 return false;
 
-            return !IsInLandAccessList(avatar);
+            if(IsInLandAccessList(avatar))
+                return false;
+
+            // check for a NPC
+            ScenePresence sp;
+            if (!m_scene.TryGetScenePresence(avatar, out sp))
+                return true;
+
+            if(sp==null || !sp.isNPC)
+                return true;
+            
+            INPC npccli = (INPC)sp.ControllingClient;
+            if(npccli== null)
+                return true;
+            
+            UUID owner = npccli.Owner;
+
+            if(owner == UUID.Zero)
+                return true;
+
+            if (owner == LandData.OwnerID)
+                return false;
+
+            return !IsInLandAccessList(owner);
         }
 
         public bool IsInLandAccessList(UUID avatar)
@@ -767,11 +791,10 @@ namespace OpenSim.Region.CoreModules.World.Land
                 {
                     if (over.LandData.LocalID == LandData.LocalID)
                     {
-                        if (((over.LandData.Flags & (uint)ParcelFlags.AllowDamage) != 0) &&
-                            m_scene.RegionInfo.RegionSettings.AllowDamage)
+                        if(m_scene.RegionInfo.RegionSettings.AllowDamage)
                             avatar.Invulnerable = false;
                         else
-                            avatar.Invulnerable = true;
+                            avatar.Invulnerable = (over.LandData.Flags & (uint)ParcelFlags.AllowDamage) == 0;
 
                         SendLandUpdateToClient(snap_selection, avatar.ControllingClient);
                         avatar.currentParcelUUID = LandData.GlobalID;

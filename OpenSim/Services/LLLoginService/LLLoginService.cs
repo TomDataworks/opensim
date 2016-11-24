@@ -512,8 +512,8 @@ namespace OpenSim.Services.LLLoginService
                 //
                 if (m_MessageUrl != String.Empty)
                 {
-                    WebClient client = new WebClient();
-                    processedMessage = client.DownloadString(m_MessageUrl);
+                    using(WebClient client = new WebClient())
+                        processedMessage = client.DownloadString(m_MessageUrl);
                 }
                 else
                 {
@@ -588,6 +588,7 @@ namespace OpenSim.Services.LLLoginService
                     List<GridRegion> defaults = m_GridService.GetDefaultRegions(scopeID);
                     if (defaults != null && defaults.Count > 0)
                     {
+                        flags |= TeleportFlags.ViaRegionID;
                         region = defaults[0];
                         where = "safe";
                     }
@@ -597,7 +598,10 @@ namespace OpenSim.Services.LLLoginService
                             account.FirstName, account.LastName);
                         region = FindAlternativeRegion(scopeID);
                         if (region != null)
+                        {
+                            flags |= TeleportFlags.ViaRegionID;
                             where = "safe";
+                        }
                     }
                 }
 
@@ -618,6 +622,7 @@ namespace OpenSim.Services.LLLoginService
                     List<GridRegion> defaults = m_GridService.GetDefaultRegions(scopeID);
                     if (defaults != null && defaults.Count > 0)
                     {
+                        flags |= TeleportFlags.ViaRegionID;
                         region = defaults[0];
                         where = "safe";
                     }
@@ -626,7 +631,10 @@ namespace OpenSim.Services.LLLoginService
                         m_log.Info("[LLOGIN SERVICE]: Last Region Not Found Attempting to find random region");
                         region = FindAlternativeRegion(scopeID);
                         if (region != null)
+                        {
+                            flags |= TeleportFlags.ViaRegionID;
                             where = "safe";
+                        }
                     }
 
                 }
@@ -777,7 +785,10 @@ namespace OpenSim.Services.LLLoginService
             ulong handle;
             string imageURL = string.Empty, reason = string.Empty;
             string message;
-            if (m_GatekeeperConnector.LinkRegion(gatekeeper, out regionID, out handle, out domainName, out imageURL, out reason))
+            int sizeX = (int)Constants.RegionSize;
+            int sizeY = (int)Constants.RegionSize;
+
+            if (m_GatekeeperConnector.LinkRegion(gatekeeper, out regionID, out handle, out domainName, out imageURL, out reason, out sizeX, out sizeY))
             {
                 string homeURI = null;
                 if (account.ServiceURLs != null && account.ServiceURLs.ContainsKey("HomeURI"))

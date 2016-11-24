@@ -153,6 +153,7 @@ namespace OpenSim.Region.Framework.Scenes
         }
 
         public ITerrainChannel Heightmap;
+        public ITerrainChannel Bakedmap;
 
         /// <value>
         /// Allows retrieval of land information for this scene.
@@ -286,7 +287,7 @@ namespace OpenSim.Region.Framework.Scenes
             }
             catch (Exception e)
             {
-                m_log.Error(string.Format("[SCENE]: SceneBase.cs: Close() - Failed with exception ", e));
+                m_log.Error(string.Format("[SCENE]: SceneBase.cs: Close() - Failed with exception {0}", e));
             }
         }
 

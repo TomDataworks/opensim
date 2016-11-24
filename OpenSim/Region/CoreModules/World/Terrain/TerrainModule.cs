@@ -231,20 +231,27 @@ namespace OpenSim.Region.CoreModules.World.Terrain
             // Install terrain module in the simulator
             lock(m_scene)
             {
+                if(m_scene.Bakedmap != null)
+                {
+                    m_baked = m_scene.Bakedmap;
+                }
                 if (m_scene.Heightmap == null)
                 {
-                    m_channel = new TerrainChannel(m_InitialTerrain, (int)m_scene.RegionInfo.RegionSizeX,
-                                                                     (int)m_scene.RegionInfo.RegionSizeY,
-                                                                     (int)m_scene.RegionInfo.RegionSizeZ);
+                    if(m_baked != null)
+                        m_channel = m_baked.MakeCopy();
+                    else
+                        m_channel = new TerrainChannel(m_InitialTerrain, 
+                                                (int)m_scene.RegionInfo.RegionSizeX,
+                                                (int)m_scene.RegionInfo.RegionSizeY,
+                                                (int)m_scene.RegionInfo.RegionSizeZ);
                     m_scene.Heightmap = m_channel;
-
-                    UpdateBakedMap();
                 }
                 else
                 {
                     m_channel = m_scene.Heightmap;
-                    UpdateBakedMap();
                 }
+                if(m_baked == null)
+                    UpdateBakedMap();
 
                 m_scene.RegisterModuleInterface<ITerrainModule>(this);
                 m_scene.EventManager.OnNewClient += EventManager_OnNewClient;
@@ -724,6 +731,8 @@ namespace OpenSim.Region.CoreModules.World.Terrain
             m_baked = m_channel.MakeCopy();
             m_painteffects[StandardTerrainEffects.Revert] = new RevertSphere(m_baked);
             m_floodeffects[StandardTerrainEffects.Revert] = new RevertArea(m_baked);
+            m_scene.Bakedmap = m_baked;
+            m_scene.SaveBakedTerrain();
         }
 
         /// <summary>
@@ -963,6 +972,27 @@ namespace OpenSim.Region.CoreModules.World.Terrain
             return wasLimited;
         }
 
+        private bool EnforceEstateLimits(int startX, int startY, int endX, int endY)
+        {
+            TerrainData terrData = m_channel.GetTerrainData();
+
+            bool wasLimited = false;
+            for (int x = startX; x <= endX; x += Constants.TerrainPatchSize)
+            {
+                for (int y = startX; y <= endY; y += Constants.TerrainPatchSize)
+                {
+                    if (terrData.IsTaintedAt(x, y, false /* clearOnTest */))
+                   {
+                        // If we should respect the estate settings then
+                        //     fixup and height deltas that don't respect them.
+                        // Note that LimitChannelChanges() modifies the TerrainChannel with the limited height values.
+                        wasLimited |= LimitChannelChanges(terrData, x, y);
+                    }
+                }
+            }
+            return wasLimited;
+        }
+
         /// <summary>
         /// Checks to see height deltas in the tainted terrain patch at xStart ,yStart
         /// are all within the current estate limits
@@ -1101,8 +1131,6 @@ namespace OpenSim.Region.CoreModules.World.Terrain
                                 }
                                 */
 
-                                int[] xPieces = new int[toSend.Count];
-                                int[] yPieces = new int[toSend.Count];
                                 float[] patchPieces = new float[toSend.Count * 2];
                                 int pieceIndex = 0;
                                 foreach (PatchesToSend pts in toSend)
@@ -1341,7 +1369,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
 
                         //block changes outside estate limits
                         if (!god)
-                            EnforceEstateLimits();
+                            EnforceEstateLimits(startX, endX, startY, endY);
                     }
                 }
                 else
@@ -1404,7 +1432,7 @@ namespace OpenSim.Region.CoreModules.World.Terrain
 
                         //block changes outside estate limits
                         if (!god)
-                            EnforceEstateLimits();
+                            EnforceEstateLimits(startX, endX, startY, endY);
                     }
                 }
                 else

@@ -748,7 +748,7 @@ namespace OpenSim.Region.Framework.Scenes
         public event OnIncomingSceneObjectDelegate OnIncomingSceneObject;
         public delegate void OnIncomingSceneObjectDelegate(SceneObjectGroup so);
 
-        public delegate void NewInventoryItemUploadComplete(UUID avatarID, AssetType type, UUID assetID, string name, int userlevel);
+        public delegate void NewInventoryItemUploadComplete(InventoryItemBase item, int userlevel);
 
         public event NewInventoryItemUploadComplete OnNewInventoryItemUploadComplete;
 
@@ -1881,7 +1881,7 @@ namespace OpenSim.Region.Framework.Scenes
                     catch (Exception e)
                     {
                         m_log.ErrorFormat(
-                            "[EVENT MANAGER]: Delegate for TriggerOnAttach failed - continuing.  {0} {1}", 
+                            "[EVENT MANAGER]: Delegate for TriggerGroupMove failed - continuing.  {0} {1}", 
                             e.Message, e.StackTrace);
                     }
                 }
@@ -2262,7 +2262,7 @@ namespace OpenSim.Region.Framework.Scenes
             }
         }
 
-        public void TriggerOnNewInventoryItemUploadComplete(UUID agentID, AssetType type, UUID AssetID, String AssetName, int userlevel)
+        public void TriggerOnNewInventoryItemUploadComplete(InventoryItemBase item, int userlevel)
         {
             NewInventoryItemUploadComplete handlerNewInventoryItemUpdateComplete = OnNewInventoryItemUploadComplete;
             if (handlerNewInventoryItemUpdateComplete != null)
@@ -2271,7 +2271,7 @@ namespace OpenSim.Region.Framework.Scenes
                 {
                     try
                     {
-                        d(agentID, type, AssetID, AssetName, userlevel);
+                        d(item, userlevel);
                     }
                     catch (Exception e)
                     {

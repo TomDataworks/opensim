@@ -570,17 +570,27 @@ namespace OpenSim.Region.OptionalModules.Agent.InternetRelayClientView.Server
         public UUID ActiveGroupId
         {
             get { return UUID.Zero; }
+            set {}
         }
 
         public string ActiveGroupName
         {
             get { return "IRCd User"; }
+            set {}
         }
 
         public ulong ActiveGroupPowers
         {
             get { return 0; }
+            set {}
         }
+
+        public Dictionary<UUID, ulong> GetGroupPowers()
+        {
+            return new Dictionary<UUID, ulong>();
+        }
+        
+        public void SetGroupPowers(Dictionary<UUID, ulong> powers) { }        
 
         public ulong GetGroupPowers(UUID groupID)
         {
@@ -687,6 +697,7 @@ namespace OpenSim.Region.OptionalModules.Agent.InternetRelayClientView.Server
         public event TeleportLandmarkRequest OnTeleportLandmarkRequest;
         public event TeleportCancel OnTeleportCancel;
         public event DeRezObject OnDeRezObject;
+        public event RezRestoreToWorld OnRezRestoreToWorld;
         public event Action<IClientAPI> OnRegionHandShakeReply;
         public event GenericCall1 OnRequestWearables;
         public event Action<IClientAPI, bool> OnCompleteMovementToRegion;
@@ -1012,12 +1023,12 @@ namespace OpenSim.Region.OptionalModules.Agent.InternetRelayClientView.Server
             
         }
 
-        public void SendWindData(Vector2[] windSpeeds)
+        public void SendWindData(int version, Vector2[] windSpeeds)
         {
             
         }
 
-        public void SendCloudData(float[] cloudCover)
+        public void SendCloudData(int version, float[] cloudCover)
         {
             
         }
@@ -1202,6 +1213,11 @@ namespace OpenSim.Region.OptionalModules.Agent.InternetRelayClientView.Server
         }
 
         public void SendAgentAlertMessage(string message, bool modal)
+        {
+            
+        }
+
+        public void SendAlertMessage(string message, string info)
         {
             
         }
@@ -1625,6 +1641,22 @@ namespace OpenSim.Region.OptionalModules.Agent.InternetRelayClientView.Server
             
         }
 
+        public void UpdateGroupMembership(GroupMembershipData[] data)
+        {
+            
+        }
+
+        public void GroupMembershipRemove(UUID GroupID)
+        {
+            
+        }
+
+        public void GroupMembershipAddReplace(UUID GroupID,ulong GroupPowers)
+        {
+            
+        }
+
+
         public void SendAvatarNotesReply(UUID targetID, string text)
         {
             
@@ -1718,6 +1750,10 @@ namespace OpenSim.Region.OptionalModules.Agent.InternetRelayClientView.Server
         }
         
         public void SendPlacesReply(UUID queryID, UUID transactionID, PlacesReplyData[] data)
+        {
+        }
+
+        public void SendSelectedPartsProprieties(List<ISceneEntity> parts)
         {
         }
 

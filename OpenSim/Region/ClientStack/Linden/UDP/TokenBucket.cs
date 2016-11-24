@@ -62,8 +62,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// </summary>
         protected const float m_minimumDripRate = 1500;
         
-        /// <summary>Time of the last drip, in system ticks</summary>
-        protected Int32 m_lastDrip;
+        /// <summary>Time of the last drip</summary>
+        protected double m_lastDrip;
 
         /// <summary>
         /// The number of bytes that can be sent at this moment. This is the
@@ -97,7 +97,12 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// </summary>
         protected float m_burst;
 
-        public virtual float MaxDripRate { get; set; }
+        protected float m_maxDripRate = 0;
+        public virtual float MaxDripRate
+        {
+            get { return m_maxDripRate; }
+            set { m_maxDripRate = value; }
+        }
 
         public float RequestedBurst
         {
@@ -134,7 +139,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// the system tick interval (typically around 15-22ms)</remarks>
         protected float m_dripRate;
 
-        public virtual float RequestedDripRate
+        public float RequestedDripRate
         {
             get { return (m_dripRate == 0 ? m_totalDripRequest : m_dripRate); }
             set {
@@ -146,7 +151,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             }
         }
 
-       public virtual float DripRate
+       public float DripRate
         {
             get {
                 float rate = Math.Min(RequestedDripRate,TotalDripRequest);
@@ -166,10 +171,10 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// </summary>
         protected float m_totalDripRequest;
         public float TotalDripRequest 
-            {
-                get { return m_totalDripRequest; }
-                set { m_totalDripRequest = value; }
-            }
+        {
+            get { return m_totalDripRequest; }
+            set { m_totalDripRequest = value; }
+        }
         
 #endregion Properties
 
@@ -193,9 +198,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             Parent = parent;
             RequestedDripRate = dripRate;
             RequestedBurst = MaxBurst;
-            // TotalDripRequest = dripRate; // this will be overwritten when a child node registers
-            // MaxBurst = (Int64)((double)dripRate * m_quantumsPerBurst);
-            m_lastDrip = Util.EnvironmentTickCount() + 100000;
+            m_lastDrip = Util.GetTimeStampMS() + 100000.0; // skip first drip
         }
 
 #endregion Constructor
@@ -210,7 +213,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         protected float DripRateModifier()
         {
             float driprate = DripRate;
-            return driprate >= TotalDripRequest ? 1.0f : driprate / TotalDripRequest;
+            return driprate >= TotalDripRequest ? 1.0f : (driprate / TotalDripRequest);
         }
 
         /// <summary>
@@ -313,14 +316,14 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 return;
             }
             
-            Int32 now = Util.EnvironmentTickCount();
-            Int32 deltaMS = now - m_lastDrip;
+            double now = Util.GetTimeStampMS();
+            double deltaMS = now - m_lastDrip;
             m_lastDrip = now;
 
             if (deltaMS <= 0)
                 return;
 
-            m_tokenCount += deltaMS * DripRate * m_timeScale;
+            m_tokenCount += (float)deltaMS * DripRate * m_timeScale;
 
             float burst = Burst;
             if (m_tokenCount > burst)
@@ -346,7 +349,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         // greater than this.
         // </summary>
 
-        protected float m_maxDripRate = 0;
         public override float MaxDripRate
         {
             get { return (m_maxDripRate == 0 ? m_totalDripRequest : m_maxDripRate); }
@@ -361,7 +363,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         // <summary>
         // Adjust drip rate in response to network conditions. 
         // </summary>
-        public virtual float AdjustedDripRate
+        public float AdjustedDripRate
         {
             get { return m_dripRate; }
             set
@@ -382,12 +384,14 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         {
             m_enabled = enabled;
 
-            MaxDripRate = maxDripRate;
+            m_maxDripRate = (maxDripRate == 0 ? m_totalDripRequest : Math.Max(maxDripRate, m_minimumFlow));
 
             if (enabled)
-                AdjustedDripRate = m_maxDripRate * .5f;
+                m_dripRate = m_maxDripRate * .5f;
             else
-                AdjustedDripRate = m_maxDripRate;
+                m_dripRate = m_maxDripRate;
+            if (m_parent != null)
+                m_parent.RegisterRequest(this, m_dripRate);
         }
                 
         /// <summary>

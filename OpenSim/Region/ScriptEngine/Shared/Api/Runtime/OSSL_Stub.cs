@@ -209,6 +209,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
             return m_OSSL_Functions.osRegionRestart(seconds);
         }
 
+        public int osRegionRestart(double seconds, string msg)
+        {
+            return m_OSSL_Functions.osRegionRestart(seconds, msg);
+        }
+
         public void osRegionNotice(string msg)
         {
             m_OSSL_Functions.osRegionNotice(msg);
@@ -428,6 +433,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
         public string osGetPhysicsEngineType()
         {
             return m_OSSL_Functions.osGetPhysicsEngineType();
+        }
+
+        public string osGetPhysicsEngineName()
+        {
+            return m_OSSL_Functions.osGetPhysicsEngineName();
         }
 
         public string osGetSimulatorVersion()
@@ -935,6 +945,21 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
             m_OSSL_Functions.osCauseHealing(avatar, healing);
         }
 
+        public void osSetHealth(string avatar, double health)
+        {
+            m_OSSL_Functions.osSetHealth(avatar, health);
+        }
+
+        public void osSetHealRate(string avatar, double health)
+        {
+            m_OSSL_Functions.osSetHealRate(avatar, health);
+        }
+
+        public LSL_Float osGetHealRate(string avatar)
+        {
+            return m_OSSL_Functions.osGetHealRate(avatar);
+        }
+
         public void osForceOtherSit(string avatar)
         {
             m_OSSL_Functions.osForceOtherSit(avatar);
@@ -1053,6 +1078,26 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
         public LSL_Integer osRegexIsMatch(string input, string pattern)
         {
             return m_OSSL_Functions.osRegexIsMatch(input, pattern);
+        }
+
+        public LSL_String osRequestURL(LSL_List options)
+        {
+            return m_OSSL_Functions.osRequestURL(options);
+        }
+
+        public LSL_String osRequestSecureURL(LSL_List options)
+        {
+            return m_OSSL_Functions.osRequestSecureURL(options);
+        }
+
+        public void osCollisionSound(string impact_sound, double impact_volume)
+        {
+            m_OSSL_Functions.osCollisionSound(impact_sound, impact_volume);
+        }
+
+        public void osVolumeDetect(int detect)
+        {
+            m_OSSL_Functions.osVolumeDetect(detect);
         }
     }
 }

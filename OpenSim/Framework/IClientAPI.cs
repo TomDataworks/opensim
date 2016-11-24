@@ -47,10 +47,12 @@ namespace OpenSim.Framework
 
     public delegate void ImprovedInstantMessage(IClientAPI remoteclient, GridInstantMessage im);
 
-    public delegate void RezObject(IClientAPI remoteClient, UUID itemID, Vector3 RayEnd, Vector3 RayStart,
-                                   UUID RayTargetID, byte BypassRayCast, bool RayEndIsIntersection,
-                                   bool RezSelected, bool RemoveItem, UUID fromTaskID);
+    public delegate void RezObject(IClientAPI remoteClient, UUID itemID, UUID GroupID,
+                                Vector3 RayEnd, Vector3 RayStart,
+                                UUID RayTargetID, byte BypassRayCast, bool RayEndIsIntersection,
+                                bool RezSelected, bool RemoveItem, UUID fromTaskID);
 
+    public delegate void RezRestoreToWorld(IClientAPI remoteClient, UUID itemId);
     public delegate ISceneEntity RezSingleAttachmentFromInv(IClientAPI remoteClient, UUID itemID, uint AttachmentPt);
 
     public delegate void RezMultipleAttachmentsFromInv(IClientAPI remoteClient, List<KeyValuePair<UUID, uint>> rezlist );
@@ -115,7 +117,7 @@ namespace OpenSim.Framework
 
     public delegate void ObjectExtraParams(UUID agentID, uint localID, ushort type, bool inUse, byte[] data);
 
-    public delegate void ObjectSelect(uint localID, IClientAPI remoteClient);
+    public delegate void ObjectSelect(List<uint> localID, IClientAPI remoteClient);
 
     public delegate void ObjectRequest(uint localID, IClientAPI remoteClient);
 
@@ -241,7 +243,7 @@ namespace OpenSim.Framework
 
     public delegate void CreateNewInventoryItem(
         IClientAPI remoteClient, UUID transActionID, UUID folderID, uint callbackID, string description, string name,
-        sbyte invType, sbyte type, byte wearableType, uint nextOwnerMask, int creationDate);
+        sbyte invType, sbyte type, byte wearableType, uint everyoneMask, int creationDate);
 
     public delegate void LinkInventoryItem(
         IClientAPI remoteClient, UUID transActionID, UUID folderID, uint callbackID, string description, string name,
@@ -583,10 +585,10 @@ namespace OpenSim.Framework
         public float dwell;
     }
 
-    public class IEntityUpdate
+    public class EntityUpdate
     {
         private ISceneEntity m_entity;
-        private uint m_flags;
+        private PrimUpdateFlags m_flags;
         private int m_updateTime;
 
         public ISceneEntity Entity
@@ -594,7 +596,7 @@ namespace OpenSim.Framework
             get { return m_entity; }
         }
 
-        public uint Flags
+        public PrimUpdateFlags Flags
         {
             get { return m_flags; }
         }
@@ -604,50 +606,34 @@ namespace OpenSim.Framework
             get { return m_updateTime; }
         }
 
-        public virtual void Update(IEntityUpdate update)
+        public virtual void Update(EntityUpdate oldupdate)
         {
-            m_flags |= update.Flags;
+            // we are on the new one
+            PrimUpdateFlags updateFlags = oldupdate.Flags;
+            if(m_flags.HasFlag(PrimUpdateFlags.CancelKill))
+                m_flags = PrimUpdateFlags.FullUpdate;
+            else if(updateFlags.HasFlag(PrimUpdateFlags.Kill))
+                return;
+            else // kill case will just merge in
+                m_flags |= updateFlags;
 
             // Use the older of the updates as the updateTime
-            if (Util.EnvironmentTickCountCompare(UpdateTime, update.UpdateTime) > 0)
-                m_updateTime = update.UpdateTime;
+            if (Util.EnvironmentTickCountCompare(UpdateTime, oldupdate.UpdateTime) > 0)
+                m_updateTime = oldupdate.UpdateTime;
         }
 
-        public IEntityUpdate(ISceneEntity entity, uint flags)
+        public EntityUpdate(ISceneEntity entity, PrimUpdateFlags flags)
         {
             m_entity = entity;
             m_flags = flags;
             m_updateTime = Util.EnvironmentTickCount();
         }
 
-        public IEntityUpdate(ISceneEntity entity, uint flags, Int32 updateTime)
+        public EntityUpdate(ISceneEntity entity, PrimUpdateFlags flags, Int32 updateTime)
         {
             m_entity = entity;
             m_flags = flags;
             m_updateTime = updateTime;
-        }
-    }
-
-    public class EntityUpdate : IEntityUpdate
-    {
-        private float m_timeDilation;
-
-        public float TimeDilation
-        {
-            get { return m_timeDilation; }
-        }
-
-        public EntityUpdate(ISceneEntity entity, PrimUpdateFlags flags, float timedilation)
-            : base(entity, (uint)flags)
-        {
-            // Flags = flags;
-            m_timeDilation = timedilation;
-        }
-
-        public EntityUpdate(ISceneEntity entity, PrimUpdateFlags flags, float timedilation, Int32 updateTime)
-            : base(entity,(uint)flags,updateTime)
-        {
-            m_timeDilation = timedilation;
         }
     }
 
@@ -699,9 +685,12 @@ namespace OpenSim.Framework
         ExtraData = 1 << 20,
         Sound = 1 << 21,
         Joint = 1 << 22,
-        FullUpdate = UInt32.MaxValue
+        FullUpdate = 0x3fffffff,
+        CancelKill = 0x7fffffff,
+        Kill = 0x80000000
     }
 
+/* included in .net 4.0
     public static class PrimUpdateFlagsExtensions
     {
         public static bool HasFlag(this PrimUpdateFlags updateFlags, PrimUpdateFlags flag)
@@ -709,7 +698,7 @@ namespace OpenSim.Framework
             return (updateFlags & flag) == flag;
         }
     }
-
+*/
     public interface IClientAPI
     {
         Vector3 StartPos { get; set; }
@@ -726,11 +715,15 @@ namespace OpenSim.Framework
 
         UUID SecureSessionId { get; }
 
-        UUID ActiveGroupId { get; }
+        UUID ActiveGroupId { get; set; }
 
-        string ActiveGroupName { get; }
+        string ActiveGroupName { get; set;}
 
-        ulong ActiveGroupPowers { get; }
+        ulong ActiveGroupPowers { get; set;}
+
+        Dictionary<UUID, ulong> GetGroupPowers();
+
+        void SetGroupPowers(Dictionary<UUID, ulong> powers);
 
         ulong GetGroupPowers(UUID groupID);
 
@@ -818,6 +811,7 @@ namespace OpenSim.Framework
         event TeleportLandmarkRequest OnTeleportLandmarkRequest;
         event TeleportCancel OnTeleportCancel;
         event DeRezObject OnDeRezObject;
+        event RezRestoreToWorld OnRezRestoreToWorld;
         event Action<IClientAPI> OnRegionHandShakeReply;
         event GenericCall1 OnRequestWearables;
         event Action<IClientAPI, bool> OnCompleteMovementToRegion;
@@ -1148,8 +1142,8 @@ namespace OpenSim.Framework
         void SendLayerData(float[] map);
         void SendLayerData(int px, int py, float[] map);
 
-        void SendWindData(Vector2[] windSpeeds);
-        void SendCloudData(float[] cloudCover);
+        void SendWindData(int version, Vector2[] windSpeeds);
+        void SendCloudData(int version, float[] cloudCover);
 
         /// <summary>
         /// Sent when an agent completes its movement into a region.
@@ -1262,9 +1256,11 @@ namespace OpenSim.Framework
         void SendAttachedSoundGainChange(UUID objectID, float gain);
 
         void SendNameReply(UUID profileId, string firstname, string lastname);
-        void SendAlertMessage(string message);
 
+        void SendAlertMessage(string message);
+        void SendAlertMessage(string message, string into);
         void SendAgentAlertMessage(string message, bool modal);
+
         void SendLoadURL(string objectname, UUID objectID, UUID ownerID, bool groupOwned, string message, string url);
 
         /// <summary>
@@ -1386,6 +1382,8 @@ namespace OpenSim.Framework
 
         void SendObjectPropertiesReply(ISceneEntity Entity);
 
+        void SendSelectedPartsProprieties(List<ISceneEntity> parts);
+
         void SendPartPhysicsProprieties(ISceneEntity Entity);
 
         void SendAgentOffline(UUID[] agentIDs);
@@ -1471,6 +1469,9 @@ namespace OpenSim.Framework
 
         void SendAgentDropGroup(UUID groupID);
         void RefreshGroupMembership();
+        void UpdateGroupMembership(GroupMembershipData[] data);
+        void GroupMembershipRemove(UUID GroupID);
+        void GroupMembershipAddReplace(UUID GroupID,ulong GroupPowers);
         void SendAvatarNotesReply(UUID targetID, string text);
         void SendAvatarPicksReply(UUID targetID, Dictionary<UUID, string> picks);
         void SendPickInfoReply(UUID pickID,UUID creatorID, bool topPick, UUID parcelID, string name, string desc, UUID snapshotID, string user, string originalName, string simName, Vector3 posGlobal, int sortOrder, bool enabled);

@@ -55,6 +55,7 @@ using OpenSim.Tests.Common;
 
 namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
 {
+/*
     /// <summary>
     /// Attachment tests
     /// </summary>
@@ -219,7 +220,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
 //                sp.Appearance.GetAttachpoint(attSo.FromItemID),
 //                Is.EqualTo((int)AttachmentPoint.Chest));
 
-            InventoryItemBase attachmentItem = scene.InventoryService.GetItem(new InventoryItemBase(attSo.FromItemID));
+            InventoryItemBase attachmentItem = scene.InventoryService.GetItem(sp.UUID, attSo.FromItemID);
             Assert.That(attachmentItem, Is.Not.Null);
             Assert.That(attachmentItem.Name, Is.EqualTo(attName));
 
@@ -266,7 +267,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
 //                    sp.Appearance.GetAttachpoint(attSo.FromItemID),
 //                    Is.EqualTo((int)AttachmentPoint.LeftHand));
 
-                InventoryItemBase attachmentItem = scene.InventoryService.GetItem(new InventoryItemBase(attSo.FromItemID));
+                InventoryItemBase attachmentItem = scene.InventoryService.GetItem(sp.UUID, attSo.FromItemID);
                 Assert.That(attachmentItem, Is.Not.Null);
                 Assert.That(attachmentItem.Name, Is.EqualTo(so.Name));
 
@@ -299,7 +300,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
 //                    sp.Appearance.GetAttachpoint(attSo.FromItemID),
 //                    Is.EqualTo((int)AttachmentPoint.LeftHand));
 
-                InventoryItemBase attachmentItem = scene.InventoryService.GetItem(new InventoryItemBase(attSo.FromItemID));
+                InventoryItemBase attachmentItem = scene.InventoryService.GetItem(sp.UUID, attSo.FromItemID);
                 Assert.That(attachmentItem, Is.Not.Null);
                 Assert.That(attachmentItem.Name, Is.EqualTo(so2.Name));
 
@@ -332,7 +333,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
 //                    sp.Appearance.GetAttachpoint(attSo.FromItemID),
 //                    Is.EqualTo((int)AttachmentPoint.LeftHand));
 
-                InventoryItemBase attachmentItem = scene.InventoryService.GetItem(new InventoryItemBase(attSo.FromItemID));
+                InventoryItemBase attachmentItem = scene.InventoryService.GetItem(sp.UUID, attSo.FromItemID);
                 Assert.That(attachmentItem, Is.Not.Null);
                 Assert.That(attachmentItem.Name, Is.EqualTo(so2.Name));
 
@@ -600,7 +601,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
 //            Assert.That(sp.Appearance.GetAttachments().Count, Is.EqualTo(0));
 
             // Check item status
-            Assert.That(scene.InventoryService.GetItem(new InventoryItemBase(attItem.ID)), Is.Null);
+            Assert.That(scene.InventoryService.GetItem(sp.UUID, attItem.ID), Is.Null);
 
             // Check object in scene
             SceneObjectGroup soInScene = scene.GetSceneObjectGroup("att");
@@ -679,7 +680,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
 
             scene.AttachmentsModule.DetachSingleAttachmentToInv(sp, rezzedSo);
 
-            InventoryItemBase userItemUpdated = scene.InventoryService.GetItem(userItem);
+            InventoryItemBase userItemUpdated = scene.InventoryService.GetItem(userItem.Owner, userItem.ID);
             AssetBase asset = scene.AssetService.Get(userItemUpdated.AssetID.ToString());
 
             // TODO: It would probably be better here to check script state via the saving and retrieval of state
@@ -804,7 +805,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
             Assert.That(m_numberOfAttachEventsFired, Is.EqualTo(0));
         }
 
-/*
+
         [Test]
         public void TestSameSimulatorNeighbouringRegionsTeleportV1()
         {
@@ -844,7 +845,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
                 sceneB, config, new CapabilitiesModule(), etmB, attModB, new BasicInventoryAccessModule());
 
             // FIXME: Hack - this is here temporarily to revert back to older entity transfer behaviour
-            lscm.ServiceVersion = 0.1f;
+            //lscm.ServiceVersion = 0.1f;
 
             UserAccount ua1 = UserAccountHelpers.CreateUserWithInventory(sceneA, 0x1);
 
@@ -912,7 +913,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
             // Check events
             Assert.That(m_numberOfAttachEventsFired, Is.EqualTo(0));
         }
-*/
+
 
         [Test]
         public void TestSameSimulatorNeighbouringRegionsTeleportV2()
@@ -1025,4 +1026,5 @@ namespace OpenSim.Region.CoreModules.Avatar.Attachments.Tests
             Assert.That(m_numberOfAttachEventsFired, Is.EqualTo(0));
         }
     }
+*/
 }

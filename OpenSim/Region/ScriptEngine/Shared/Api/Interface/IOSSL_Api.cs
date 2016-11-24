@@ -135,6 +135,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
         void osTerrainFlush();
 
         int osRegionRestart(double seconds);
+        int osRegionRestart(double seconds, string msg);
         void osRegionNotice(string msg);
         bool osConsoleCommand(string Command);
         void osSetParcelMediaURL(string url);
@@ -261,6 +262,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
         string osGetSimulatorVersion();
         LSL_Integer osCheckODE();
         string osGetPhysicsEngineType();
+        string osGetPhysicsEngineName();
         Object osParseJSONNew(string JSON);
         Hashtable osParseJSON(string JSON);
 
@@ -366,6 +368,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
         void osSetSpeed(string UUID, LSL_Float SpeedModifier);
         LSL_Float osGetHealth(string avatar);
         void osCauseHealing(string avatar, double healing);
+        void osSetHealth(string avatar, double health);
+        void osSetHealRate(string avatar, double health);
+        LSL_Float osGetHealRate(string avatar);
         void osCauseDamage(string avatar, double damage);
         void osForceOtherSit(string avatar);
         void osForceOtherSit(string avatar, string target);
@@ -468,5 +473,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
         /// <param name="regex">string to use as pattern</param>
         /// <returns>boolean</returns>
         LSL_Integer osRegexIsMatch(string input, string pattern);
+
+        LSL_String osRequestURL(LSL_List options);
+        LSL_String osRequestSecureURL(LSL_List options);
+        void osCollisionSound(string impact_sound, double impact_volume);
+        void osVolumeDetect(int detect);
     }
 }

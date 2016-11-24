@@ -120,13 +120,13 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <summary>Circuit code that this client is connected on</summary>
         public readonly uint CircuitCode;
         /// <summary>Sequence numbers of packets we've received (for duplicate checking)</summary>
-        public readonly IncomingPacketHistoryCollection PacketArchive = new IncomingPacketHistoryCollection(200);
+        public IncomingPacketHistoryCollection PacketArchive = new IncomingPacketHistoryCollection(200);
 
         /// <summary>Packets we have sent that need to be ACKed by the client</summary>
-        public readonly UnackedPacketCollection NeedAcks = new UnackedPacketCollection();
+        public UnackedPacketCollection NeedAcks = new UnackedPacketCollection();
 
         /// <summary>ACKs that are queued up, waiting to be sent to the client</summary>
-        public readonly DoubleLocklessQueue<uint> PendingAcks = new DoubleLocklessQueue<uint>();
+        public DoubleLocklessQueue<uint> PendingAcks = new DoubleLocklessQueue<uint>();
 
         /// <summary>Current packet sequence number</summary>
         public int CurrentSequence;
@@ -161,15 +161,16 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <summary>Total byte count of unacked packets sent to this client</summary>
         public int UnackedBytes;
 
+        private int m_packetsUnAckReported;
         /// <summary>Total number of received packets that we have reported to the OnPacketStats event(s)</summary>
         private int m_packetsReceivedReported;
         /// <summary>Total number of sent packets that we have reported to the OnPacketStats event(s)</summary>
         private int m_packetsSentReported;
         /// <summary>Holds the Environment.TickCount value of when the next OnQueueEmpty can be fired</summary>
-        private int m_nextOnQueueEmpty = 1;
+        private double m_nextOnQueueEmpty = 0;
 
         /// <summary>Throttle bucket for this agent's connection</summary>
-        private readonly AdaptiveTokenBucket m_throttleClient;
+        private AdaptiveTokenBucket m_throttleClient;
         public AdaptiveTokenBucket FlowThrottle
         {
             get { return m_throttleClient; }
@@ -178,10 +179,10 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <summary>Throttle buckets for each packet category</summary>
         private readonly TokenBucket[] m_throttleCategories;
         /// <summary>Outgoing queues for throttled packets</summary>
-        private readonly DoubleLocklessQueue<OutgoingPacket>[] m_packetOutboxes = new DoubleLocklessQueue<OutgoingPacket>[THROTTLE_CATEGORY_COUNT];
+        private DoubleLocklessQueue<OutgoingPacket>[] m_packetOutboxes = new DoubleLocklessQueue<OutgoingPacket>[THROTTLE_CATEGORY_COUNT];
         /// <summary>A container that can hold one packet for each outbox, used to store
         /// dequeued packets that are being held for throttling</summary>
-        private readonly OutgoingPacket[] m_nextPackets = new OutgoingPacket[THROTTLE_CATEGORY_COUNT];
+        private OutgoingPacket[] m_nextPackets = new OutgoingPacket[THROTTLE_CATEGORY_COUNT];
         /// <summary>A reference to the LLUDPServer that is managing this client</summary>
         private readonly LLUDPServer m_udpServer;
 
@@ -292,9 +293,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             // pull the throttle out of the scene throttle
             m_throttleClient.Parent.UnregisterRequest(m_throttleClient);
-            OnPacketStats = null;
-            OnQueueEmpty = null;
-        }
+            PendingAcks.Clear();
+            NeedAcks.Clear();
+         }
 
         /// <summary>
         /// Gets information about this client connection
@@ -389,11 +390,12 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             {
                 int newPacketsReceived = PacketsReceived - m_packetsReceivedReported;
                 int newPacketsSent = PacketsSent - m_packetsSentReported;
-
+                int newPacketUnAck = UnackedBytes - m_packetsUnAckReported;
                 callback(newPacketsReceived, newPacketsSent, UnackedBytes);
 
                 m_packetsReceivedReported += newPacketsReceived;
                 m_packetsSentReported += newPacketsSent;
+                m_packetsUnAckReported += newPacketUnAck;
             }
         }
 
@@ -771,8 +773,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             RTO = Math.Min(RTO * 2, m_maxRTO);
         }
 
-
-        const int MIN_CALLBACK_MS = 10;              
+        const double MIN_CALLBACK_MS = 20.0;
+        private bool m_isQueueEmptyRunning;
 
         /// <summary>
         /// Does an early check to see if this queue empty callback is already
@@ -783,37 +785,24 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         {
             if (!m_isQueueEmptyRunning)
             {
-                int start = Environment.TickCount & Int32.MaxValue;
+                if (!HasUpdates(categories))
+                    return;
 
+                double start = Util.GetTimeStampMS();
                 if (start < m_nextOnQueueEmpty)
                     return;
             
                 m_isQueueEmptyRunning = true;
-
                 m_nextOnQueueEmpty = start + MIN_CALLBACK_MS;
-                if (m_nextOnQueueEmpty == 0)
-                    m_nextOnQueueEmpty = 1;
 
-                if (HasUpdates(categories))
-                {
-                    if (!m_udpServer.OqrEngine.IsRunning)
-                    {
-                        // Asynchronously run the callback
-                        Util.FireAndForget(FireQueueEmpty, categories, "LLUDPClient.BeginFireQueueEmpty");
-                    }
-                    else
-                    {
-                        m_udpServer.OqrEngine.QueueJob(AgentID.ToString(), () => FireQueueEmpty(categories));
-                    }
-                }
+                // Asynchronously run the callback
+                if (m_udpServer.OqrEngine.IsRunning)
+                    m_udpServer.OqrEngine.QueueJob(AgentID.ToString(), () => FireQueueEmpty(categories));
                 else
-                {
-                    m_isQueueEmptyRunning = false;
-                }
+                    Util.FireAndForget(FireQueueEmpty, categories, "LLUDPClient.BeginFireQueueEmpty");
             }
         }
 
-        private bool m_isQueueEmptyRunning;
        
 
         /// <summary>

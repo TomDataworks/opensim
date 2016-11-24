@@ -339,7 +339,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 y = (float)Quat.y;
                 z = (float)Quat.z;
                 s = (float)Quat.s;
-                if (x == 0 && y == 0 && z == 0 && s == 0)
+                if (s == 0 && x == 0 && y == 0 && z == 0)
                     s = 1;
             }
 
@@ -349,7 +349,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 y = Y;
                 z = Z;
                 s = S;
-                if (x == 0 && y == 0 && z == 0 && s == 0)
+                if (s == 0 && x == 0 && y == 0 && z == 0)
                     s = 1;
             }
 
@@ -368,7 +368,7 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 res = res & Double.TryParse(tmps[1], NumberStyles.Float, Culture.NumberFormatInfo, out y);
                 res = res & Double.TryParse(tmps[2], NumberStyles.Float, Culture.NumberFormatInfo, out z);
                 res = res & Double.TryParse(tmps[3], NumberStyles.Float, Culture.NumberFormatInfo, out s);
-                if (x == 0 && y == 0 && z == 0 && s == 0)
+                if (s == 0 && x == 0 && y == 0 && z == 0)
                     s = 1;
             }
 
@@ -700,16 +700,45 @@ namespace OpenSim.Region.ScriptEngine.Shared
                 }
             }
 
+            // use LSL_Types.Quaternion to parse and store a vector4 for lightShare
+            public LSL_Types.Quaternion GetVector4Item(int itemIndex)
+            {
+                if (Data[itemIndex] is LSL_Types.Quaternion)
+                {
+                    LSL_Types.Quaternion q = (LSL_Types.Quaternion)Data[itemIndex];
+                    return q;
+                }
+                else if(Data[itemIndex] is OpenMetaverse.Quaternion)
+                {
+                    LSL_Types.Quaternion q = new LSL_Types.Quaternion(
+                            (OpenMetaverse.Quaternion)Data[itemIndex]);
+                    q.Normalize();
+                    return q;
+                }
+                else
+                {
+                    throw new InvalidCastException(string.Format(
+                        "{0} expected but {1} given",
+                        typeof(LSL_Types.Quaternion).Name,
+                        Data[itemIndex] != null ?
+                        Data[itemIndex].GetType().Name : "null"));
+                }
+            }
+
             public LSL_Types.Quaternion GetQuaternionItem(int itemIndex)
             {
                 if (Data[itemIndex] is LSL_Types.Quaternion)
                 {
-                    return (LSL_Types.Quaternion)Data[itemIndex];
+                    LSL_Types.Quaternion q = (LSL_Types.Quaternion)Data[itemIndex];
+                    q.Normalize();
+                    return q;
                 }
                 else if(Data[itemIndex] is OpenMetaverse.Quaternion)
                 {
-                    return new LSL_Types.Quaternion(
+                    LSL_Types.Quaternion q = new LSL_Types.Quaternion(
                             (OpenMetaverse.Quaternion)Data[itemIndex]);
+                    q.Normalize();
+                    return q;
                 }
                 else
                 {

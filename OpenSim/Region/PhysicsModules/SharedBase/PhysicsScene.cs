@@ -112,6 +112,8 @@ namespace OpenSim.Region.PhysicsModules.SharedBase
         /// </summary>
         public string EngineType { get; protected set; }
 
+        public string EngineName { get; protected set; }
+
         // The only thing that should register for this event is the SceneGraph
         // Anything else could cause problems.
         public event physicsCrash OnPhysicsCrash;
@@ -329,15 +331,6 @@ namespace OpenSim.Region.PhysicsModules.SharedBase
         {
             return false;
         }
-
-        public virtual bool SupportsCombining()
-        {
-            return false;
-        }
-
-        public virtual void Combine(PhysicsScene pScene, Vector3 offset, Vector3 extents) {}
-        public virtual void CombineTerrain(float[] heightMap, Vector3 pOffset) {}
-        public virtual void UnCombine(PhysicsScene pScene) {}
 
         /// <summary>
         /// Queue a raycast against the physics scene.

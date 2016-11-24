@@ -43,6 +43,10 @@ namespace OpenSim.Region.OptionalModules.World.NPC
     public class NPCAvatar : IClientAPI, INPC
     {
         public bool SenseAsAgent { get; set; }
+        public UUID Owner
+        {
+            get { return m_ownerID;}
+        }
 
         public delegate void ChatToNPC(
             string message, byte type, Vector3 fromPos, string fromName, 
@@ -294,6 +298,7 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         public event SetAlwaysRun OnSetAlwaysRun;
 
         public event DeRezObject OnDeRezObject;
+        public event RezRestoreToWorld OnRezRestoreToWorld;
         public event Action<IClientAPI> OnRegionHandShakeReply;
         public event GenericCall1 OnRequestWearables;
         public event Action<IClientAPI, bool> OnCompleteMovementToRegion;
@@ -586,17 +591,26 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         public string ActiveGroupName
         {
             get { return String.Empty; }
+            set { }
         }
 
         public ulong ActiveGroupPowers
         {
             get { return 0; }
+            set { }
         }
 
         public bool IsGroupMember(UUID groupID)
         {
             return (m_hostGroupID == groupID);
         }
+
+        public Dictionary<UUID, ulong> GetGroupPowers()
+        {
+            return new Dictionary<UUID, ulong>();
+        }
+
+        public void SetGroupPowers(Dictionary<UUID, ulong> powers) { }
 
         public ulong GetGroupPowers(UUID groupID)
         {
@@ -710,9 +724,9 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         {
         }
 
-        public virtual void SendWindData(Vector2[] windSpeeds) { }
+        public virtual void SendWindData(int version, Vector2[] windSpeeds) { }
 
-        public virtual void SendCloudData(float[] cloudCover) { }
+        public virtual void SendCloudData(int version, float[] cloudCover) { }
 
         public virtual void MoveAgentIntoRegion(RegionInfo regInfo, Vector3 pos, Vector3 look)
         {
@@ -868,6 +882,10 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         }
 
         public void SendAgentAlertMessage(string message, bool modal)
+        {
+        }
+
+        public void SendAlertMessage(string message, string info)
         {
         }
 
@@ -1250,6 +1268,18 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         {
         }
 
+        public void UpdateGroupMembership(GroupMembershipData[] data)
+        {
+        }
+
+        public void GroupMembershipRemove(UUID GroupID)
+        {
+        }
+
+        public void GroupMembershipAddReplace(UUID GroupID,ulong GroupPowers)
+        {
+        }
+
         public void SendUseCachedMuteList()
         {
         }
@@ -1304,6 +1334,10 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         }
 
         public void SendPlacesReply(UUID queryID, UUID transactionID, PlacesReplyData[] data)
+        {
+        }
+
+        public void SendSelectedPartsProprieties(List<ISceneEntity> parts)
         {
         }
 

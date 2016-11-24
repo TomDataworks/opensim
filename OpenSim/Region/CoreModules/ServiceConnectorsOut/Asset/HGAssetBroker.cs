@@ -354,7 +354,7 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Asset
                 m_Cache.Cache(asset);
 
             string id;
-            if (IsHG(asset.ID))
+            if (isHG)
             {
                 if (m_AssetPerms.AllowedExport(asset.Type))
                     id = m_HGService.Store(asset);
@@ -367,12 +367,14 @@ namespace OpenSim.Region.CoreModules.ServiceConnectorsOut.Asset
             if (String.IsNullOrEmpty(id))
                 return string.Empty;
             
-            asset.ID = id;
+           if(asset.ID != id)
+           {
+                asset.ID = id;
+                if (m_Cache != null)
+                    m_Cache.Cache(asset);
+           }
 
-            if (m_Cache != null)
-                m_Cache.Cache(asset);
-
-            return id;
+           return id;
         }
 
         public bool UpdateContent(string id, byte[] data)

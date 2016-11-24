@@ -255,6 +255,23 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
             return 0;
         }
 
+       private void OnMakeRootAgent(ScenePresence sp)
+        {
+            if(sp.gotCrossUpdate)
+                return;
+
+            RecacheFriends(sp.ControllingClient);
+
+            lock (m_NeedsToNotifyStatus)
+            {
+                if (m_NeedsToNotifyStatus.Remove(sp.UUID))
+                {
+                    // Inform the friends that this user is online. This can only be done once the client is a Root Agent.
+                    StatusChange(sp.UUID, true);
+                }
+            }
+        }
+
         private void OnNewClient(IClientAPI client)
         {
             client.OnInstantMessage += OnInstantMessage;
@@ -327,20 +344,6 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
             }
         }
 
-        private void OnMakeRootAgent(ScenePresence sp)
-        {
-            RecacheFriends(sp.ControllingClient);
-
-            lock (m_NeedsToNotifyStatus)
-            {
-                if (m_NeedsToNotifyStatus.Remove(sp.UUID))
-                {
-                    // Inform the friends that this user is online. This can only be done once the client is a Root Agent.
-                    StatusChange(sp.UUID, true);
-                }
-            }
-        }
-
         private void OnClientLogin(IClientAPI client)
         {
             UUID agentID = client.AgentId;
@@ -357,6 +360,11 @@ namespace OpenSim.Region.CoreModules.Avatar.Friends
             // Register that we need to send the list of online friends to this user
             lock (m_NeedsListOfOnlineFriends)
                 m_NeedsListOfOnlineFriends.Add(agentID);
+        }
+
+        public void IsNowRoot(ScenePresence sp)
+        {
+            OnMakeRootAgent(sp);
         }
 
         public virtual bool SendFriendsOnlineIfNeeded(IClientAPI client)

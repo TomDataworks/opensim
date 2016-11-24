@@ -180,6 +180,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
                 m_groupWriteKey = groupsConfig.GetString("XmlRpcServiceWriteKey", string.Empty);
 
                 m_cacheTimeout = groupsConfig.GetInt("GroupsCacheTimeout", 30);
+
                 if (m_cacheTimeout == 0)
                 {
                     m_log.WarnFormat("[XMLRPC-GROUPS-CONNECTOR]: Groups Cache Disabled.");
@@ -199,7 +200,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 
         public void Close()
         {
-            m_log.DebugFormat("[XMLRPC-GROUPS-CONNECTOR]: Closing {0}", this.Name);
         }
 
         public void AddRegion(OpenSim.Region.Framework.Scenes.Scene scene)
@@ -382,10 +382,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 
             GroupMembershipData MemberInfo = GetAgentGroupMembership(requestingAgentID, AgentID, GroupID);
             GroupProfileData MemberGroupProfile = GroupProfileHashtableToGroupProfileData(respData);
-
-            MemberGroupProfile.MemberTitle = MemberInfo.GroupTitle;
-            MemberGroupProfile.PowersMask = MemberInfo.GroupPowers;
-
+            if(MemberInfo != null)
+            {
+                MemberGroupProfile.MemberTitle = MemberInfo.GroupTitle;
+                MemberGroupProfile.PowersMask = MemberInfo.GroupPowers;
+            }
             return MemberGroupProfile;
         }
 
@@ -802,11 +803,12 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
         {
             if (m_groupsAgentsDroppedFromChatSession.ContainsKey(groupID))
             {
+            if (m_groupsAgentsInvitedToChatSession[groupID].Contains(agentID))
+                m_groupsAgentsInvitedToChatSession[groupID].Remove(agentID);
+
                 // If not in dropped list, add
                 if (!m_groupsAgentsDroppedFromChatSession[groupID].Contains(agentID))
-                {
                     m_groupsAgentsDroppedFromChatSession[groupID].Add(agentID);
-                }
             }
         }
 
@@ -817,10 +819,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 
             // If nessesary, remove from dropped list
             if (m_groupsAgentsDroppedFromChatSession[groupID].Contains(agentID))
-            {
                 m_groupsAgentsDroppedFromChatSession[groupID].Remove(agentID);
-            }
-        }
+
+            if (!m_groupsAgentsInvitedToChatSession[groupID].Contains(agentID))
+                m_groupsAgentsInvitedToChatSession[groupID].Add(agentID);
+        }   
 
         private void CreateGroupChatSessionTracking(UUID groupID)
         {
@@ -974,12 +977,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
 
                 try
                 {
-                    resp = req.Send(m_groupsServerURI, 10000);
-
-                    if ((m_cacheTimeout > 0) && (CacheKey != null))
-                    {
-                        m_memoryCache.AddOrUpdate(CacheKey, resp, TimeSpan.FromSeconds(m_cacheTimeout));
-                    }
+                    resp = req.Send(m_groupsServerURI);
                 }
                 catch (Exception e)
                 {
@@ -1001,9 +999,19 @@ namespace OpenSim.Region.OptionalModules.Avatar.XmlRpcGroups
                             m_log.WarnFormat("[XMLRPC-GROUPS-CONNECTOR]: {0} :: {1}", key, param[key].ToString());
                         }
                     }
+
+                    if ((m_cacheTimeout > 0) && (CacheKey != null))
+                    {
+                        m_memoryCache.AddOrUpdate(CacheKey, resp, 10.0);
+                    }
                     Hashtable respData = new Hashtable();
                     respData.Add("error", e.ToString());
                     return respData;
+                }
+
+                if ((m_cacheTimeout > 0) && (CacheKey != null))
+                {
+                    m_memoryCache.AddOrUpdate(CacheKey, resp, 10.0);
                 }
             }
 
@@ -1135,6 +1143,7 @@ namespace Nwc.XmlRpc
             request.ContentType = "text/xml";
             request.AllowWriteStreamBuffering = true;
             request.KeepAlive = !_disableKeepAlive;
+            request.Timeout = 30000;
 
             using (Stream stream = request.GetRequestStream())
             {

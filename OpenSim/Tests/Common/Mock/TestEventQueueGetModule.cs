@@ -147,9 +147,14 @@ namespace OpenSim.Tests.Common
                 timeStamp, offline, parentEstateID, position, ttl, transactionID, fromGroup, binaryBucket);
         }
 
-        public void ChatterBoxSessionAgentListUpdates (UUID sessionID, UUID fromAgent, UUID toAgent, bool canVoiceChat, bool isModerator, bool textMute)
+        public void ChatterBoxSessionAgentListUpdates (UUID sessionID, UUID fromAgent, UUID toAgent, bool canVoiceChat, bool isModerator, bool textMute , bool isEnterorLeave)
         {
-            AddEvent(toAgent, "ChatterBoxSessionAgentListUpdates", sessionID, fromAgent, canVoiceChat, isModerator, textMute);
+            AddEvent(toAgent, "ChatterBoxSessionAgentListUpdates", sessionID, fromAgent, canVoiceChat, isModerator, textMute, isEnterorLeave);
+        }
+
+        public void ChatterBoxForceClose (UUID toAgent, UUID sessionID, string reason)
+        {
+            AddEvent(toAgent, "ForceCloseChatterBoxSession", sessionID, reason);
         }
 
         public void ParcelProperties (OpenMetaverse.Messages.Linden.ParcelPropertiesMessage parcelPropertiesMessage, UUID avatarID)
@@ -157,9 +162,9 @@ namespace OpenSim.Tests.Common
             AddEvent(avatarID, "ParcelProperties", parcelPropertiesMessage);
         }
 
-        public void GroupMembership (OpenMetaverse.Packets.AgentGroupDataUpdatePacket groupUpdate, UUID avatarID)
+        public void GroupMembershipData(UUID receiverAgent, GroupMembershipData[] data)
         {
-            AddEvent(avatarID, "GroupMembership", groupUpdate);
+            AddEvent(receiverAgent, "AgentGroupDataUpdate", data);
         }
 
         public OSD ScriptRunningEvent (UUID objectID, UUID itemID, bool running, bool mono)

@@ -45,6 +45,8 @@ using ComponentAce.Compression.Libs.zlib;
 using OSDArray = OpenMetaverse.StructuredData.OSDArray;
 using OSDMap = OpenMetaverse.StructuredData.OSDMap;
 
+using Nini.Config;
+
 namespace OpenSim.Region.ClientStack.Linden
 {
     public struct ModelPrimLimits
@@ -100,6 +102,25 @@ namespace OpenSim.Region.ClientStack.Linden
         public float PhysicalPrimScaleMax = 10f;
         public int ObjectLinkedPartsMax = 512;
 
+
+        public ModelCost(Scene scene)
+        {
+            PrimScaleMin = scene.m_minNonphys;
+            NonPhysicalPrimScaleMax = scene.m_maxNonphys;
+            PhysicalPrimScaleMax = scene.m_maxPhys;
+            ObjectLinkedPartsMax = scene.m_linksetCapacity;                 
+        }
+
+        public void Econfig(IConfig EconomyConfig)
+        {
+            ModelMeshCostFactor = EconomyConfig.GetFloat("MeshModelUploadCostFactor", ModelMeshCostFactor);
+            ModelTextureCostFactor = EconomyConfig.GetFloat("MeshModelUploadTextureCostFactor", ModelTextureCostFactor);
+            ModelMinCostFactor = EconomyConfig.GetFloat("MeshModelMinCostFactor", ModelMinCostFactor);
+                    // next 2 are normalized so final cost is afected by modelUploadFactor above and normal cost
+            primCreationCost = EconomyConfig.GetFloat("ModelPrimCreationCost", primCreationCost);
+            bytecost = EconomyConfig.GetFloat("ModelMeshByteCost", bytecost);
+        }
+
         // storage for a single mesh asset cost parameters       
         private class ameshCostParam
         {
@@ -140,9 +161,9 @@ namespace OpenSim.Region.ClientStack.Linden
 
             int numberInstances = resources.instance_list.Array.Count;
 
-            if( numberInstances > ObjectLinkedPartsMax )
+            if (ObjectLinkedPartsMax != 0 && numberInstances > ObjectLinkedPartsMax)
             {
-                error = "Model whould have more than " + ObjectLinkedPartsMax.ToString() + " linked prims";
+                error = "Model would have more than " + ObjectLinkedPartsMax.ToString() + " linked prims";
                 return false;
             }
 
