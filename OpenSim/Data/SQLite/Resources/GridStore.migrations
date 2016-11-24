@@ -1,0 +1,53 @@
+:VERSION 1
+
+BEGIN;
+
+CREATE TABLE regions (
+  uuid TEXT NOT NULL,
+  regionHandle UNSIGNED BIG INT NOT NULL,
+  regionName TEXT default NULL,
+  regionRecvKey TEXT default NULL,
+  regionSendKey TEXT default NULL,
+  regionSecret TEXT default NULL,
+  regionDataURI TEXT default NULL,
+  serverIP TEXT default NULL,
+  serverPort UNSIGNED INTEGER default NULL,
+  serverURI TEXT default NULL,
+  locX UNSIGNED INTEGER default NULL,
+  locY UNSIGNED INTEGER default NULL,
+  locZ UNSIGNED INTEGER default NULL,
+  eastOverrideHandle UNSIGNED BIG INT default NULL,
+  westOverrideHandle UNSIGNED BIG INT default NULL,
+  southOverrideHandle UNSIGNED BIG INT default NULL,
+  northOverrideHandle UNSIGNED BIG INT default NULL,
+  regionAssetURI TEXT default NULL,
+  regionAssetRecvKey TEXT default NULL,
+  regionAssetSendKey TEXT default NULL,
+  regionUserURI TEXT default NULL,
+  regionUserRecvKey TEXT default NULL,
+  regionUserSendKey TEXT default NULL,
+  regionMapTexture TEXT default NULL,
+  serverHttpPort INTEGER default NULL,
+  serverRemotingPort INTEGER default NULL,
+  owner_uuid TEXT default '00000000-0000-0000-0000-000000000000' not NULL,
+  originUUID TEXT default '00000000-0000-0000-0000-000000000000' not NULL,
+  access UNSIGNED INTEGER default 1,
+  ScopeID char(36) not null default '00000000-0000-0000-0000-000000000000',
+  sizeX INTEGER not null default 0,
+  sizeY INTEGER not null default 0,
+  flags INTEGER not null default 0,
+  last_seen INTEGER not null default 0,
+  PrincipalID char(36) not null default '00000000-0000-0000-0000-000000000000',
+  Token TEXT NOT NULL,
+  ParcelMapTexture TEXT DEFAULT NULL,
+  PRIMARY KEY  (uuid)
+);
+
+CREATE INDEX regionName on regions(regionName);
+CREATE INDEX regionHandle on regions(regionHandle);
+CREATE INDEX overrideHandles on regions(eastOverrideHandle,westOverrideHandle,southOverrideHandle,northOverrideHandle);
+CREATE INDEX ScopeID on regions(ScopeID);
+CREATE INDEX flags ON regions(flags);
+
+COMMIT;
+
