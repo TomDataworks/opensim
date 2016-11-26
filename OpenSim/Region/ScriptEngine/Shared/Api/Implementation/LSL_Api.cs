@@ -1803,6 +1803,53 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             return 0;
         }
 
+        public LSL_Integer llScaleByFactor(double scaling_factor)
+        {
+            m_host.AddScriptLPS(1);
+            SceneObjectGroup group = m_host.ParentGroup;
+
+            if(scaling_factor < 1e-6)
+                return ScriptBaseClass.FALSE;
+            if(scaling_factor > 1e6)
+                return ScriptBaseClass.FALSE;
+
+            if (group == null || group.IsDeleted || group.inTransit)
+                return ScriptBaseClass.FALSE;
+
+            if (group.RootPart.PhysActor != null && group.RootPart.PhysActor.IsPhysical)
+                return ScriptBaseClass.FALSE;
+
+            if (group.RootPart.KeyframeMotion != null)
+                return ScriptBaseClass.FALSE;
+
+            if(group.GroupResize(scaling_factor))
+                return ScriptBaseClass.TRUE;
+            else
+                return ScriptBaseClass.FALSE;
+        }
+
+        public LSL_Float llGetMaxScaleFactor()
+        {
+            m_host.AddScriptLPS(1);
+            SceneObjectGroup group = m_host.ParentGroup;
+ 
+            if (group == null || group.IsDeleted || group.inTransit)
+                return 1.0f;
+
+            return (LSL_Float)group.GetMaxGroupResizeScale();
+        }
+
+        public LSL_Float llGetMinScaleFactor()
+        {
+            m_host.AddScriptLPS(1);
+            SceneObjectGroup group = m_host.ParentGroup;
+ 
+            if (group == null || group.IsDeleted || group.inTransit)
+                return 1.0f;
+
+            return (LSL_Float)group.GetMinGroupResizeScale();
+        }
+
         public void llSetScale(LSL_Vector scale)
         {
             m_host.AddScriptLPS(1);
@@ -3049,7 +3096,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             m_host.AddScriptLPS(1);
             double ScriptTime = Util.GetTimeStampMS() - m_timer;
-            return (ScriptTime / 1000.0);
+            return (float)Math.Round((ScriptTime / 1000.0), 3);
         }
 
         public void llResetTime()
@@ -3064,7 +3111,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             double now = Util.GetTimeStampMS();
             double ScriptTime = now - m_timer;
             m_timer = now;
-            return (ScriptTime / 1000.0);
+            return (float)Math.Round((ScriptTime / 1000.0), 3);
         }
 
         public void llSound(string sound, double volume, int queue, int loop)
