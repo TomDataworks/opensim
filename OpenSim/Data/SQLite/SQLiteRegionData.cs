@@ -57,16 +57,16 @@ namespace OpenSim.Data.SQLite
 
         public List<RegionData> Get(string regionName, UUID scopeID)
         {
-            string command = "select * from `"+m_Realm+"` where regionName like ?regionName";
+            string command = "select * from `"+m_Realm+"` where regionName like :regionName";
             if (scopeID != UUID.Zero)
-                command += " and ScopeID = ?scopeID";
+                command += " and ScopeID = :scopeID";
 
             command += " order by regionName";
 
             using (SqliteCommand cmd = new SqliteCommand(command))
             {
-                cmd.Parameters.AddWithValue("?regionName", regionName);
-                cmd.Parameters.AddWithValue("?scopeID", scopeID.ToString());
+                cmd.Parameters.AddWithValue(":regionName", regionName);
+                cmd.Parameters.AddWithValue(":scopeID", scopeID.ToString());
 
                 return new List<RegionData>(DoQuery(cmd));
             }
@@ -75,23 +75,23 @@ namespace OpenSim.Data.SQLite
         public RegionData Get(int posX, int posY, UUID scopeID)
         {
 /* fixed size regions
-            string command = "select * from `"+m_Realm+"` where locX = ?posX and locY = ?posY";
+            string command = "select * from `"+m_Realm+"` where locX = :posX and locY = :posY";
             if (scopeID != UUID.Zero)
-                command += " and ScopeID = ?scopeID";
+                command += " and ScopeID = :scopeID";
 
             using (SqliteCommand cmd = new SqliteCommand(command))
             {
-                cmd.Parameters.AddWithValue("?posX", posX.ToString());
-                cmd.Parameters.AddWithValue("?posY", posY.ToString());
-                cmd.Parameters.AddWithValue("?scopeID", scopeID.ToString());
+                cmd.Parameters.AddWithValue(":posX", posX.ToString());
+                cmd.Parameters.AddWithValue(":posY", posY.ToString());
+                cmd.Parameters.AddWithValue(":scopeID", scopeID.ToString());
 
                 RegionData ret = DoQuery(cmd)[0];
             }
 */
             // extend database search for maximum region size area
-            string command = "select * from `" + m_Realm + "` where locX between ?startX and ?endX and locY between ?startY and ?endY";
+            string command = "select * from `" + m_Realm + "` where locX between :startX and :endX and locY between :startY and :endY";
             if (scopeID != UUID.Zero)
-                command += " and ScopeID = ?scopeID";
+                command += " and ScopeID = :scopeID";
 
             int startX = posX - (int)Constants.MaximumRegionSize;
             int startY = posY - (int)Constants.MaximumRegionSize;
@@ -101,11 +101,11 @@ namespace OpenSim.Data.SQLite
             List<RegionData> ret;
             using (SqliteCommand cmd = new SqliteCommand(command))
             {
-                cmd.Parameters.AddWithValue("?startX", startX.ToString());
-                cmd.Parameters.AddWithValue("?startY", startY.ToString());
-                cmd.Parameters.AddWithValue("?endX", endX.ToString());
-                cmd.Parameters.AddWithValue("?endY", endY.ToString());
-                cmd.Parameters.AddWithValue("?scopeID", scopeID.ToString());
+                cmd.Parameters.AddWithValue(":startX", startX.ToString());
+                cmd.Parameters.AddWithValue(":startY", startY.ToString());
+                cmd.Parameters.AddWithValue(":endX", endX.ToString());
+                cmd.Parameters.AddWithValue(":endY", endY.ToString());
+                cmd.Parameters.AddWithValue(":scopeID", scopeID.ToString());
 
                 ret = new List<RegionData>(DoQuery(cmd));
             }
@@ -130,14 +130,14 @@ namespace OpenSim.Data.SQLite
 
         public RegionData Get(UUID regionID, UUID scopeID)
         {
-            string command = "select * from `"+m_Realm+"` where uuid = ?regionID";
+            string command = "select * from `"+m_Realm+"` where uuid = :regionID";
             if (scopeID != UUID.Zero)
-                command += " and ScopeID = ?scopeID";
+                command += " and ScopeID = :scopeID";
 
             using (SqliteCommand cmd = new SqliteCommand(command))
             {
-                cmd.Parameters.AddWithValue("?regionID", regionID.ToString());
-                cmd.Parameters.AddWithValue("?scopeID", scopeID.ToString());
+                cmd.Parameters.AddWithValue(":regionID", regionID.ToString());
+                cmd.Parameters.AddWithValue(":scopeID", scopeID.ToString());
 
                 List<RegionData> ret = new List<RegionData>(DoQuery(cmd));
                 if (ret.Count == 0)
@@ -150,24 +150,24 @@ namespace OpenSim.Data.SQLite
         public List<RegionData> Get(int startX, int startY, int endX, int endY, UUID scopeID)
         {
 /* fix size regions
-            string command = "select * from `"+m_Realm+"` where locX between ?startX and ?endX and locY between ?startY and ?endY";
+            string command = "select * from `"+m_Realm+"` where locX between :startX and :endX and locY between :startY and :endY";
             if (scopeID != UUID.Zero)
-                command += " and ScopeID = ?scopeID";
+                command += " and ScopeID = :scopeID";
 
             using (SqliteCommand cmd = new SqliteCommand(command))
             {
-                cmd.Parameters.AddWithValue("?startX", startX.ToString());
-                cmd.Parameters.AddWithValue("?startY", startY.ToString());
-                cmd.Parameters.AddWithValue("?endX", endX.ToString());
-                cmd.Parameters.AddWithValue("?endY", endY.ToString());
-                cmd.Parameters.AddWithValue("?scopeID", scopeID.ToString());
+                cmd.Parameters.AddWithValue(":startX", startX.ToString());
+                cmd.Parameters.AddWithValue(":startY", startY.ToString());
+                cmd.Parameters.AddWithValue(":endX", endX.ToString());
+                cmd.Parameters.AddWithValue(":endY", endY.ToString());
+                cmd.Parameters.AddWithValue(":scopeID", scopeID.ToString());
 
                 return DoQuery(cmd).ToList();
             }
  */
-            string command = "select * from `" + m_Realm + "` where locX between ?startX and ?endX and locY between ?startY and ?endY";
+            string command = "select * from `" + m_Realm + "` where locX between :startX and :endX and locY between :startY and :endY";
             if (scopeID != UUID.Zero)
-                command += " and ScopeID = ?scopeID";
+                command += " and ScopeID = :scopeID";
 
             int qstartX = startX - (int)Constants.MaximumRegionSize;
             int qstartY = startY - (int)Constants.MaximumRegionSize;
@@ -175,11 +175,11 @@ namespace OpenSim.Data.SQLite
             List<RegionData> dbret;
             using (SqliteCommand cmd = new SqliteCommand(command))
             {
-                cmd.Parameters.AddWithValue("?startX", qstartX.ToString());
-                cmd.Parameters.AddWithValue("?startY", qstartY.ToString());
-                cmd.Parameters.AddWithValue("?endX", endX.ToString());
-                cmd.Parameters.AddWithValue("?endY", endY.ToString());
-                cmd.Parameters.AddWithValue("?scopeID", scopeID.ToString());
+                cmd.Parameters.AddWithValue(":startX", qstartX.ToString());
+                cmd.Parameters.AddWithValue(":startY", qstartY.ToString());
+                cmd.Parameters.AddWithValue(":endX", endX.ToString());
+                cmd.Parameters.AddWithValue(":endY", endY.ToString());
+                cmd.Parameters.AddWithValue(":scopeID", scopeID.ToString());
 
                 dbret = new List<RegionData>(DoQuery(cmd));
             }
@@ -192,7 +192,7 @@ namespace OpenSim.Data.SQLite
             foreach (RegionData r in dbret)
             {
                 if (r.posX + r.sizeX > startX && r.posX <= endX
-                    && r.posY + r.sizeX > startY && r.posY <= endY)
+                    && r.posY + r.sizeY > startY && r.posY <= endY)
                     ret.Add(r);
             }
             return ret;
@@ -200,10 +200,10 @@ namespace OpenSim.Data.SQLite
 
         public bool SetDataItem(UUID regionID, string item, string value)
         {
-            using (SqliteCommand cmd = new SqliteCommand("update `" + m_Realm + "` set `" + item + "` = ?" + item + " where uuid = ?UUID"))
+            using (SqliteCommand cmd = new SqliteCommand("update `" + m_Realm + "` set `" + item + "` = :" + item + " where uuid = :UUID"))
             {
-                cmd.Parameters.AddWithValue("?" + item, value);
-                cmd.Parameters.AddWithValue("?UUID", regionID.ToString());
+                cmd.Parameters.AddWithValue(":" + item, value);
+                cmd.Parameters.AddWithValue(":UUID", regionID.ToString());
 
                 if (cmd.ExecuteNonQuery() > 0)
                     return true;
@@ -244,11 +244,11 @@ namespace OpenSim.Data.SQLite
         {
             string command = "select * from `" + m_Realm + "` where (flags & " + regionFlags.ToString() + ") <> 0";
             if (scopeID != UUID.Zero)
-                command += " and ScopeID = ?scopeID";
+                command += " and ScopeID = :scopeID";
 
             using (SqliteCommand cmd = new SqliteCommand(command))
             {
-                cmd.Parameters.AddWithValue("?scopeID", scopeID.ToString());
+                cmd.Parameters.AddWithValue(":scopeID", scopeID.ToString());
     
                 return new List<RegionData>(DoQuery(cmd));
             }
