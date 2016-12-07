@@ -1189,3 +1189,15 @@ ALTER TABLE land ADD COLUMN "GroupAVSounds" boolean NOT NULL default true;
 ALTER TABLE prims ADD COLUMN "RotationAxisLocks" boolean NOT NULL default false;
 
 COMMIT;
+
+:VERSION 43
+
+BEGIN TRANSACTION;
+
+CREATE TABLE bakedterrain(
+  regionuuid varchar(255) DEFAULT NULL,
+  revision int DEFAULT NULL,
+  heightfield bytea
+);
+
+COMMIT;

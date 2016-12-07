@@ -56,6 +56,7 @@ namespace OpenSim.Data.PGSQL
         /// </summary>
         private PGSQLManager _Database;
         private string m_connectionString;
+        private object m_dbLock = new object();
         protected virtual Assembly Assembly
         {
             get { return GetType().Assembly; }
@@ -518,6 +519,89 @@ namespace OpenSim.Data.PGSQL
         }
 
         #endregion
+
+        public TerrainData LoadBakedTerrain(UUID regionID, int pSizeX, int pSizeY, int pSizeZ)
+        {
+            TerrainData terrData = null;
+
+            lock (m_dbLock)
+            {
+                using (NpgsqlConnection dbcon = new NpgsqlConnection(m_connectionString))
+                {
+                    dbcon.Open();
+
+                    using (NpgsqlCommand cmd = dbcon.CreateCommand())
+                    {
+                        cmd.CommandText = "select RegionUUID, Revision, Heightfield " +
+                            "from bakedterrain where RegionUUID = :RegionUUID ";
+                        cmd.Parameters.AddWithValue("RegionUUID", regionID.ToString());
+
+                        using (IDataReader reader = cmd.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                int rev = Convert.ToInt32(reader["Revision"]);
+                                if ((reader["Heightfield"] != DBNull.Value))
+                                {
+                                    byte[] blob = (byte[])reader["Heightfield"];
+                                    terrData = TerrainData.CreateFromDatabaseBlobFactory(pSizeX, pSizeY, pSizeZ, rev, blob);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return terrData;
+        }
+
+
+        public void StoreBakedTerrain(TerrainData terrData, UUID regionID)
+        {
+            Util.FireAndForget(delegate(object x)
+            {
+                _Log.Info("[REGION DB]: Storing Baked terrain");
+
+                lock (m_dbLock)
+                {
+                    using (NpgsqlConnection dbcon = new NpgsqlConnection(m_connectionString))
+                    {
+                        dbcon.Open();
+
+                        using (NpgsqlCommand cmd = dbcon.CreateCommand())
+                        {
+                            cmd.CommandText = "delete from bakedterrain where RegionUUID = :RegionUUID";
+                            cmd.Parameters.AddWithValue("RegionUUID", regionID.ToString());
+
+                            using (NpgsqlCommand cmd2 = dbcon.CreateCommand())
+                            {
+                                try
+                                {
+                                    cmd2.CommandText = "insert into bakedterrain (RegionUUID, " +
+                                            "Revision, Heightfield) values (:RegionUUID, " +
+                                            ":Revision, :Heightfield)";
+
+                                    int terrainDBRevision;
+                                    Array terrainDBblob;
+                                    terrData.GetDatabaseBlob(out terrainDBRevision, out terrainDBblob);
+
+                                    cmd2.Parameters.AddWithValue("RegionUUID", regionID.ToString());
+                                    cmd2.Parameters.AddWithValue("Revision", terrainDBRevision);
+                                    cmd2.Parameters.AddWithValue("Heightfield", terrainDBblob);
+
+                                    cmd.ExecuteNonQuery();
+                                    cmd2.ExecuteNonQuery();
+                                }
+                                catch (Exception e)
+                                {
+                                    _Log.ErrorFormat(e.ToString());
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         /// <summary>
         /// Loads the terrain map.
