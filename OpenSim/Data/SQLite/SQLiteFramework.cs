@@ -44,7 +44,13 @@ namespace OpenSim.Data.SQLite
     /// </summary>
     public class SQLiteFramework
     {
-        protected Object m_lockObject = new Object();
+        private static readonly log4net.ILog m_log =
+                log4net.LogManager.GetLogger(
+                System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+        protected string m_connectionString;
+
+        protected Object m_dbLock = new Object();
 
         protected SQLiteFramework(string connectionString)
         {
@@ -72,6 +78,37 @@ namespace OpenSim.Data.SQLite
                 //Console.WriteLine("XXX " + cmd.CommandText);
 
                 return cmd.ExecuteNonQuery();
+            }
+        }
+
+        protected int ExecuteNonQuery(SqliteCommand cmd)
+        {
+            lock (m_dbLock)
+            {
+                using (SqliteConnection dbcon = new SqliteConnection(m_connectionString))
+                {
+                    try
+                    {
+                        dbcon.Open();
+                        cmd.Connection = dbcon;
+
+                        try
+                        {
+                            return cmd.ExecuteNonQuery();
+                        }
+                        catch (Exception e)
+                        {
+                            m_log.Error(e.Message, e);
+                            m_log.Error(Environment.StackTrace.ToString());
+                            return 0;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        m_log.Error(e.Message, e);
+                        return 0;
+                    }
+                }
             }
         }
 
