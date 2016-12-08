@@ -112,7 +112,7 @@ namespace OpenSim.Data.PGSQL
                     if (reader.Read())
                     {
                         meta = new AssetMetadata();
-                        hash = reader["hash"].ToString();
+                        hash = reader["hash"].ToString().Trim();
                         meta.ID = id;
                         meta.FullID = new UUID(id);
                         meta.Name = String.Empty;
@@ -137,7 +137,7 @@ namespace OpenSim.Data.PGSQL
             if (DaysBetweenAccessTimeUpdates > 0 && (DateTime.UtcNow - Utils.UnixTimeToDateTime(AccessTime)).TotalDays < DaysBetweenAccessTimeUpdates)
                 return;
 
-            string query = String.Format("UPDATE {0} SET \"access_time\" = :access_time WHERE \"id\" = :id", m_Table);
+            string query = String.Format("UPDATE {0} SET \"access_time\" = :access_time WHERE \"id\" = (:id)::uuid", m_Table);
             using (NpgsqlConnection dbcon = new NpgsqlConnection(m_connectionString))
             using (NpgsqlCommand cmd = new NpgsqlCommand(query, dbcon))
             {
@@ -157,10 +157,10 @@ namespace OpenSim.Data.PGSQL
                 string oldhash;
                 AssetMetadata existingAsset = Get(meta.ID, out oldhash);
 
-                string query = String.Format("UPDATE {0} SET \"access_time\" = :access_time WHERE \"id\" = :id", m_Table);
+                string query = String.Format("UPDATE {0} SET \"access_time\" = :access_time WHERE \"id\" = (:id)::uuid", m_Table);
                 if (existingAsset == null)
                 {
-                   query = String.Format("insert into {0} (\"id\", \"type\", \"hash\", \"asset_flags\", \"create_time\", \"access_time\") values ( :id, :type, :hash, :asset_flags, :create_time, :access_time)", m_Table);
+                   query = String.Format("insert into {0} (\"id\", \"type\", \"hash\", \"asset_flags\", \"create_time\", \"access_time\") values ( (:id)::uuid, :type, :hash, :asset_flags, :create_time, :access_time)", m_Table);
                    found = true;
                 }
 
