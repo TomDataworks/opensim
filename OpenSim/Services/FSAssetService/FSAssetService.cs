@@ -75,6 +75,7 @@ namespace OpenSim.Services.FSAssetService
         protected int m_readTicks = 0;
         protected int m_missingAssets = 0;
         protected int m_missingAssetsFS = 0;
+        protected string m_missingAssetsFile = "";
         protected string m_FSBase;
         protected bool m_useOsgridFormat = false;
         protected bool m_showStats = true;
@@ -173,6 +174,8 @@ namespace OpenSim.Services.FSAssetService
 
             // Setup directory structure including temp directory
             m_SpoolDirectory = assetConfig.GetString("SpoolDirectory", "/tmp");
+
+            m_missingAssetsFile = assetConfig.GetString("MissingAssetsFile", "");
 
             string spoolTmp = Path.Combine(m_SpoolDirectory, "spool");
 
@@ -451,8 +454,13 @@ namespace OpenSim.Services.FSAssetService
                 }
                 if (asset == null && m_showStats)
                 {
-                    // m_log.InfoFormat("[FSASSETS]: Asset {0} not found", id);
+                    //m_log.InfoFormat("[FSASSETS]: Asset {0} not found", id);
                     m_missingAssets++;
+                    if(!String.IsNullOrEmpty(m_missingAssetsFile)) {
+                        using (StreamWriter sw = File.AppendText(m_missingAssetsFile)) {
+                            sw.WriteLine(id);
+                        }
+                    }
                 }
                 return asset;
             }
@@ -480,7 +488,7 @@ namespace OpenSim.Services.FSAssetService
                     {
                         if (m_showStats)
                             m_missingAssetsFS++;
-                        // m_log.InfoFormat("[FSASSETS]: Asset {0}, hash {1} not found in FS", id, hash);
+                        m_log.InfoFormat("[FSASSETS]: Asset {0}, hash {1} not found in FS", id, hash);
                     }
                     else
                     {
@@ -571,23 +579,13 @@ namespace OpenSim.Services.FSAssetService
             {
                 try
                 {
+                    MemoryStream ms = new MemoryStream();
                     using (GZipStream gz = new GZipStream(new FileStream(diskFile + ".gz", FileMode.Open, FileAccess.Read), CompressionMode.Decompress))
                     {
-                        using (MemoryStream ms = new MemoryStream())
-                        {
-                            byte[] data = new byte[32768];
-                            int bytesRead;
-
-                            do
-                            {
-                                bytesRead = gz.Read(data, 0, 32768);
-                                if (bytesRead > 0)
-                                    ms.Write(data, 0, bytesRead);
-                            } while (bytesRead > 0);
-
-                            return ms.ToArray();
-                        }
+                        gz.CopyTo(ms);
                     }
+
+                    return ms.ToArray();
                 }
                 catch (Exception)
                 {
