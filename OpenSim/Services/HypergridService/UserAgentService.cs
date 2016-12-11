@@ -383,7 +383,7 @@ namespace OpenSim.Services.HypergridService
 
             bool result = travel.ClientIPAddress == reportedIP || travel.MyIpAddress == reportedIP; // NATed
 
-            m_log.DebugFormat("[USER AGENT SERVICE]: Comparing {0} with login IP {1} and MyIP {1}; result is {3}",
+            m_log.DebugFormat("[USER AGENT SERVICE]: Comparing {0} with login IP {1} and MyIP {2}; result is {3}",
                                 reportedIP, travel.ClientIPAddress, travel.MyIpAddress, result);
 
             return result;
