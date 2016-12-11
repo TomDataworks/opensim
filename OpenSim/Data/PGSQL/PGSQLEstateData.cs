@@ -325,7 +325,10 @@ namespace OpenSim.Data.PGSQL
                 {
                     while (reader.Read())
                     {
-                        uuids.Add(new UUID((Guid)reader["uuid"])); //uuid);
+                        UUID uuid = new UUID();
+                        UUID.TryParse(reader["uuid"].ToString(), out uuid);
+
+                        uuids.Add(uuid);
                     }
                 }
             }
@@ -372,7 +375,7 @@ namespace OpenSim.Data.PGSQL
                     cmd.Parameters.AddWithValue("uuid", Guid.Empty);
                     foreach (UUID uuid in data)
                     {
-                        cmd.Parameters["uuid"].Value = uuid.Guid; //.ToString(); //TODO check if this works
+                        cmd.Parameters["uuid"].Value = uuid.ToString();
                         cmd.ExecuteNonQuery();
                     }
                 }

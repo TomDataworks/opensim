@@ -783,7 +783,7 @@ namespace OpenSim.Data.PGSQL
                 cmd.ExecuteNonQuery();
             }
 
-            sql = @"INSERT INTO landaccesslist (""LandUUID"",""AccessUUID"",""LandFlags"",""Expires"") VALUES (:LandUUID,:AccessUUID,:Flags,:Expires)";
+            sql = @"INSERT INTO landaccesslist (""LandUUID"",""AccessUUID"",""Flags"",""Expires"") VALUES (:LandUUID,:AccessUUID,:Flags,:Expires)";
 
             using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn))
