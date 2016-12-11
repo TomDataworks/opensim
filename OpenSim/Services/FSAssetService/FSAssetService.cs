@@ -76,6 +76,7 @@ namespace OpenSim.Services.FSAssetService
         protected int m_missingAssets = 0;
         protected int m_missingAssetsFS = 0;
         protected string m_missingAssetsFile = "";
+        protected static object m_missingAssetsFileLock = new object();
         protected string m_FSBase;
         protected bool m_useOsgridFormat = false;
         protected bool m_showStats = true;
@@ -456,9 +457,11 @@ namespace OpenSim.Services.FSAssetService
                 {
                     //m_log.InfoFormat("[FSASSETS]: Asset {0} not found", id);
                     m_missingAssets++;
-                    if(!String.IsNullOrEmpty(m_missingAssetsFile)) {
-                        using (StreamWriter sw = File.AppendText(m_missingAssetsFile)) {
-                            sw.WriteLine(id);
+                    lock(m_missingAssetsFileLock) {
+                        if(!String.IsNullOrEmpty(m_missingAssetsFile)) {
+                            using (StreamWriter sw = File.AppendText(m_missingAssetsFile)) {
+                                sw.WriteLine(id);
+                            }
                         }
                     }
                 }
