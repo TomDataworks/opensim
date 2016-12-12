@@ -154,12 +154,16 @@ namespace OpenSim
             if(!Util.IsWindows())
             {
                 // linux mac os specifics
-                signals = new Mono.Unix.UnixSignal[]
-                {
-//              new Mono.Unix.UnixSignal(Mono.Unix.Native.Signum.SIGINT),
-                new Mono.Unix.UnixSignal(Mono.Unix.Native.Signum.SIGTERM)
-                };
-                signal_thread.Start();
+                try {
+                  signals = new Mono.Unix.UnixSignal[]
+                  {
+//                  new Mono.Unix.UnixSignal(Mono.Unix.Native.Signum.SIGINT),
+                    new Mono.Unix.UnixSignal(Mono.Unix.Native.Signum.SIGTERM)
+                  };
+                  signal_thread.Start();
+                } catch (Exception e) {
+                  m_log.WarnFormat("Failed to set up POSIX signals: {0}", e.ToString());
+                }
             }
             //m_log.InfoFormat("[OPENSIM MAIN]: GC Is Server GC: {0}", GCSettings.IsServerGC.ToString());
             // http://msdn.microsoft.com/en-us/library/bb384202.aspx
