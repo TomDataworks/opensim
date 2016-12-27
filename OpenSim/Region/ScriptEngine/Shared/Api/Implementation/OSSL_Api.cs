@@ -310,7 +310,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         foreach (string id in ids)
                         {
                             string current = id.Trim();
-                            if (current.ToUpper() == "PARCEL_GROUP_MEMBER" || current.ToUpper() == "PARCEL_OWNER" || current.ToUpper() == "ESTATE_MANAGER" || current.ToUpper() == "ESTATE_OWNER")
+                            if (current.ToUpper() == "PARCEL_GROUP_MEMBER" || current.ToUpper() == "PARCEL_OWNER" || current.ToUpper() == "ESTATE_MANAGER" || current.ToUpper() == "ESTATE_OWNER" || current.ToUpper() == "GOD" || current.ToUpper() == "GRID_GOD")
                             {
                                 if (!perms.AllowedOwnerClasses.Contains(current))
                                     perms.AllowedOwnerClasses.Add(current.ToUpper());
@@ -410,6 +410,24 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     if (m_FunctionPerms[function].AllowedOwnerClasses.Contains("ESTATE_OWNER"))
                     {
                         if (World.RegionInfo.EstateSettings.EstateOwner == ownerID)
+                        {
+                            return String.Empty;
+                        }
+                    }
+
+                    //Only gods may use the function
+                    if (m_FunctionPerms[function].AllowedOwnerClasses.Contains("GOD"))
+                    {
+                        if (World.Permissions.IsGod(ownerID)) 
+                        {
+                            return String.Empty;
+                        }
+                    }
+
+                    //Only grid gods may use the function
+                    if (m_FunctionPerms[function].AllowedOwnerClasses.Contains("GRID_GOD"))
+                    {
+                        if (World.Permissions.IsGridGod(ownerID)) 
                         {
                             return String.Empty;
                         }
@@ -1872,6 +1890,55 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_ScriptEngine.PostObjectEvent(
                 sceneOP.LocalId, new EventParams(
                     "dataserver", resobj, new DetectParams[0]));
+        }
+
+
+        /// <summary>
+        /// Similar to llDie but given an object UUID
+        /// </summary>
+        /// <param name="objectUUID"></param>
+
+        public void osDie(LSL_Key objectUUID)
+        {
+//            CheckThreatLevel(ThreatLevel.VeryHigh, "osDie");
+            // if this is restricted to objects rezzed by this host level can be reduced
+          
+            CheckThreatLevel(ThreatLevel.Low, "osDie");
+            m_host.AddScriptLPS(1);
+
+            UUID objUUID;
+            if (!UUID.TryParse(objectUUID, out objUUID))
+            {
+                OSSLShoutError("osDie() cannot delete objects with invalid UUIDs");
+                return;
+            }
+
+            // harakiri check
+            if(objUUID == UUID.Zero)
+            {
+                if (!m_host.ParentGroup.IsAttachment)
+                    throw new SelfDeleteException();
+                return;
+            }
+
+            SceneObjectGroup sceneOG = World.GetSceneObjectGroup(objUUID);
+
+            if (sceneOG == null || sceneOG.IsDeleted)
+                return;
+
+            if(sceneOG.IsAttachment)
+                return;
+
+            if (sceneOG.OwnerID != m_host.OwnerID)
+                return;
+            
+            // harakiri check
+            if(sceneOG.UUID == m_host.ParentGroup.UUID)
+                throw new SelfDeleteException();
+
+            // restrict to objects rezzed by host
+            if(sceneOG.RezzerID == m_host.ParentGroup.UUID)
+                World.DeleteSceneObject(sceneOG, false);
         }
 
         /// <summary>
