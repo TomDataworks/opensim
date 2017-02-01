@@ -55,7 +55,7 @@ namespace OpenSim.Region.CoreModules.Asset
         // Instrumentation
         private uint m_DebugRate;
 
-        public Type ReplaceableInterface 
+        public Type ReplaceableInterface
         {
             get { return null; }
         }
@@ -131,14 +131,15 @@ namespace OpenSim.Region.CoreModules.Asset
             // We don't do negative caching
         }
 
-        public AssetBase Get(string id)
+        public bool Get(string id, out AssetBase asset)
         {
-            Object asset = null;
-            m_Cache.TryGet(id, out asset);
+            Object a = null;
+            m_Cache.TryGet(id, out a);
 
-            Debug(asset);
+            Debug(a);
 
-            return (AssetBase)asset;
+            asset = (AssetBase)a;
+            return true;
         }
 
         public void Expire(string id)

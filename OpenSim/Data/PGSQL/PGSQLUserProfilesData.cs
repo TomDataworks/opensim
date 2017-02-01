@@ -382,7 +382,6 @@ namespace OpenSim.Data.PGSQL
                                 pick.ParcelId = DBGuid.FromDB(reader["parceluuid"]);
                                 pick.SnapshotId = DBGuid.FromDB(reader["snapshotuuid"]);
                                 pick.GlobalPos = (string)reader["posglobal"].ToString();
-                                pick.Gatekeeper = reader["gatekeeper"].ToString();
                                 pick.TopPick = Convert.ToBoolean(reader["toppick"]);
                                 pick.Enabled = Convert.ToBoolean(reader["enabled"]);
                                 pick.Name = reader["name"].ToString();
@@ -413,15 +412,15 @@ namespace OpenSim.Data.PGSQL
             query = @"WITH upsert AS (
                         UPDATE userpicks SET
                             pickuuid = :PickId, creatoruuid = :CreatorId, toppick = :TopPick, parceluuid = :ParcelId,
-                            name = :Name, description = :Desc, snapshotuuid = :SnapshotId, ""user"" = :User, 
-                            originalname = :Original, simname = :SimName, posglobal = :GlobalPos, 
-                            sortorder = :SortOrder, enabled = :Enabled, gatekeeper = :Gatekeeper 
-                        RETURNING * ) 
+                            name = :Name, description = :Desc, snapshotuuid = :SnapshotId, ""user"" = :User,
+                            originalname = :Original, simname = :SimName, posglobal = :GlobalPos,
+                            sortorder = :SortOrder, enabled = :Enabled
+                        RETURNING * )
                       INSERT INTO userpicks (pickuuid,creatoruuid,toppick,parceluuid,name,description,
-                            snapshotuuid,""user"",originalname,simname,posglobal,sortorder,enabled,gatekeeper) 
+                            snapshotuuid,""user"",originalname,simname,posglobal,sortorder,enabled)
                       SELECT
                             :PickId,:CreatorId,:TopPick,:ParcelId,:Name,:Desc,:SnapshotId,:User,
-                            :Original,:SimName,:GlobalPos,:SortOrder,:Enabled,:Gatekeeper 
+                            :Original,:SimName,:GlobalPos,:SortOrder,:Enabled
                       WHERE NOT EXISTS (
                         SELECT * FROM upsert )";
 
@@ -445,7 +444,6 @@ namespace OpenSim.Data.PGSQL
                         cmd.Parameters.Add(m_database.CreateParameter("GlobalPos", pick.GlobalPos));
                         cmd.Parameters.Add(m_database.CreateParameter("SortOrder", pick.SortOrder));
                         cmd.Parameters.Add(m_database.CreateParameter("Enabled", pick.Enabled));
-                        cmd.Parameters.Add(m_database.CreateParameter("Gatekeeper", pick.Gatekeeper));
 
                         cmd.ExecuteNonQuery();
                     }

@@ -63,6 +63,7 @@ namespace OpenSim.Services.Connectors
         /// In this case, -1 is default timeout (100 seconds), not infinite.
         /// </remarks>
         private int m_requestTimeoutSecs = -1;
+        private string m_configName = "InventoryService";
 
         private const double CACHE_EXPIRATION_SECONDS = 20.0;
         private static ExpiringCache<UUID, InventoryItemBase> m_ItemCache = new ExpiringCache<UUID,InventoryItemBase>();
@@ -76,6 +77,13 @@ namespace OpenSim.Services.Connectors
             m_ServerURI = serverURI.TrimEnd('/');
         }
 
+        public XInventoryServicesConnector(IConfigSource source, string configName)
+            : base(source, configName)
+        {
+            m_configName = configName;
+            Initialise(source);
+        }
+
         public XInventoryServicesConnector(IConfigSource source)
             : base(source, "InventoryService")
         {
@@ -84,10 +92,10 @@ namespace OpenSim.Services.Connectors
 
         public virtual void Initialise(IConfigSource source)
         {
-            IConfig config = source.Configs["InventoryService"];
+            IConfig config = source.Configs[m_configName];
             if (config == null)
             {
-                m_log.Error("[INVENTORY CONNECTOR]: InventoryService missing from OpenSim.ini");
+                m_log.ErrorFormat("[INVENTORY CONNECTOR]: {0} missing from OpenSim.ini", m_configName);
                 throw new Exception("Inventory connector init error");
             }
 
@@ -106,13 +114,13 @@ namespace OpenSim.Services.Connectors
 
             StatsManager.RegisterStat(
                 new Stat(
-                "RequestsMade", 
-                "Requests made", 
-                "Number of requests made to the remove inventory service", 
-                "requests", 
-                "inventory", 
-                serviceURI, 
-                StatType.Pull, 
+                "RequestsMade",
+                "Requests made",
+                "Number of requests made to the remove inventory service",
+                "requests",
+                "inventory",
+                serviceURI,
+                StatType.Pull,
                 MeasuresOfInterest.AverageChangeOverTime,
                 s => s.Value = RequestsMade,
                 StatVerbosity.Debug));
@@ -243,7 +251,7 @@ namespace OpenSim.Services.Connectors
 
             return inventory;
         }
-        
+
         public virtual InventoryCollection[] GetMultipleFoldersContent(UUID principalID, UUID[] folderIDs)
         {
             InventoryCollection[] inventoryArr = new InventoryCollection[folderIDs.Length];
@@ -666,7 +674,7 @@ namespace OpenSim.Services.Connectors
                         { "ASSET", assetID.ToString() }
                     });
 
-            // We cannot use CheckReturn() here because valid values for RESULT are "false" (in the case of request failure) or an int           
+            // We cannot use CheckReturn() here because valid values for RESULT are "false" (in the case of request failure) or an int
             if (ret == null)
                 return 0;
 
@@ -711,7 +719,7 @@ namespace OpenSim.Services.Connectors
                 reply = SynchronousRestFormsRequester.MakeRequest(
                     "POST", m_ServerURI + "/xinventory",
                      ServerUtils.BuildQueryString(sendData), m_requestTimeoutSecs, m_Auth);
-                
+
                 if (reply != String.Empty)
                     break;
 

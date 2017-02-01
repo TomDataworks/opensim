@@ -47,6 +47,8 @@ namespace OpenSim.Framework.Monitoring
         // Subcommand used to list other stats.
         public const string ListSubCommand = "list";
 
+        public static string StatsPassword { get; set; }
+
         // All subcommands
         public static HashSet<string> SubCommands = new HashSet<string> { AllSubCommand, ListSubCommand };
 
@@ -274,7 +276,7 @@ namespace OpenSim.Framework.Monitoring
                     {
                         if (!(string.IsNullOrEmpty(pContainerName) || pContainerName == AllSubCommand || pContainerName == contName))
                             continue;
-                        
+
                         OSDMap statMap = new OSDMap();
 
                         SortedDictionary<string, Stat> theStats = RegisteredStats[catName][contName];
@@ -301,6 +303,17 @@ namespace OpenSim.Framework.Monitoring
 //            string regpath = request["uri"].ToString();
             int response_code = 200;
             string contenttype = "text/json";
+
+            if (StatsPassword != String.Empty && (!request.ContainsKey("pass") || request["pass"].ToString() != StatsPassword))
+            {
+                responsedata["int_response_code"] = response_code;
+                responsedata["content_type"] = "text/plain";
+                responsedata["keepalive"] = false;
+                responsedata["str_response_string"] = "Access denied";
+                responsedata["access_control_allow_origin"] = "*";
+
+                return responsedata;
+            }
 
             string pCategoryName = StatsManager.AllSubCommand;
             string pContainerName = StatsManager.AllSubCommand;
@@ -398,7 +411,7 @@ namespace OpenSim.Framework.Monitoring
             {
                 if (!TryGetStatParents(stat, out category, out container))
                     return false;
-                
+
                 if(container != null)
                 {
                     container.Remove(stat.ShortName);

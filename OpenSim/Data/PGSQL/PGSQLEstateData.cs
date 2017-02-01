@@ -597,7 +597,7 @@ namespace OpenSim.Data.PGSQL
 
         public bool DeleteEstate(int estateID)
         {
-            // TODO: Implementation!            
+            // TODO: Implementation!
             return false;
         }
         #endregion

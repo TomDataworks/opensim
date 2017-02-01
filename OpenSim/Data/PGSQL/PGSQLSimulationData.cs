@@ -31,11 +31,13 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 using log4net;
 using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
+using OpenSim.Data;
 using Npgsql;
 
 namespace OpenSim.Data.PGSQL
@@ -56,7 +58,6 @@ namespace OpenSim.Data.PGSQL
         /// </summary>
         private PGSQLManager _Database;
         private string m_connectionString;
-        private object m_dbLock = new object();
         protected virtual Assembly Assembly
         {
             get { return GetType().Assembly; }
@@ -109,11 +110,11 @@ namespace OpenSim.Data.PGSQL
             Dictionary<UUID, SceneObjectGroup> objects = new Dictionary<UUID, SceneObjectGroup>();
             SceneObjectGroup grp = null;
 
-            string sql = @"SELECT *, 
-                           CASE WHEN prims.""UUID"" = prims.""SceneGroupID"" THEN 0 ELSE 1 END as sort 
-                            FROM prims 
-                            LEFT JOIN primshapes ON prims.""UUID"" = primshapes.""UUID"" 
-                            WHERE ""RegionUUID"" = :RegionUUID 
+            string sql = @"SELECT *,
+                           CASE WHEN prims.""UUID"" = prims.""SceneGroupID"" THEN 0 ELSE 1 END as sort
+                            FROM prims
+                            LEFT JOIN primshapes ON prims.""UUID"" = primshapes.""UUID""
+                            WHERE ""RegionUUID"" = :RegionUUID
                             ORDER BY ""SceneGroupID"" asc, sort asc, ""LinkNumber"" asc";
 
             using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
@@ -145,7 +146,7 @@ namespace OpenSim.Data.PGSQL
                             // There sometimes exist OpenSim bugs that 'orphan groups' so that none of the prims are
                             // recorded as the root prim (for which the UUID must equal the persisted group UUID).  In
                             // this case, force the UUID to be the same as the group UUID so that at least these can be
-                            // deleted (we need to change the UUID so that any other prims in the linkset can also be 
+                            // deleted (we need to change the UUID so that any other prims in the linkset can also be
                             // deleted).
                             if (sceneObjectPart.UUID != groupID && groupID != UUID.Zero)
                             {
@@ -177,7 +178,7 @@ namespace OpenSim.Data.PGSQL
                 objects[grp.UUID] = grp;
 
             // Instead of attempting to LoadItems on every prim,
-            // most of which probably have no items... get a 
+            // most of which probably have no items... get a
             // list from DB of all prims which have items and
             // LoadItems only on those
             List<SceneObjectPart> primsWithInventory = new List<SceneObjectPart>();
@@ -330,56 +331,54 @@ namespace OpenSim.Data.PGSQL
         private void StoreSceneObjectPrim(SceneObjectPart sceneObjectPart, NpgsqlCommand sqlCommand, UUID sceneGroupID, UUID regionUUID)
         {
             //Big query to update or insert a new prim.
-            
+
             string queryPrims = @"
-        UPDATE prims SET 
-            ""CreationDate"" = :CreationDate, ""Name"" = :Name, ""Text"" = :Text, ""Description"" = :Description, ""SitName"" = :SitName, 
-            ""TouchName"" = :TouchName, ""ObjectFlags"" = :ObjectFlags, ""OwnerMask"" = :OwnerMask, ""NextOwnerMask"" = :NextOwnerMask, ""GroupMask"" = :GroupMask, 
-            ""EveryoneMask"" = :EveryoneMask, ""BaseMask"" = :BaseMask, ""PositionX"" = :PositionX, ""PositionY"" = :PositionY, ""PositionZ"" = :PositionZ, 
-            ""GroupPositionX"" = :GroupPositionX, ""GroupPositionY"" = :GroupPositionY, ""GroupPositionZ"" = :GroupPositionZ, ""VelocityX"" = :VelocityX, 
-            ""VelocityY"" = :VelocityY, ""VelocityZ"" = :VelocityZ, ""AngularVelocityX"" = :AngularVelocityX, ""AngularVelocityY"" = :AngularVelocityY, 
-            ""AngularVelocityZ"" = :AngularVelocityZ, ""AccelerationX"" = :AccelerationX, ""AccelerationY"" = :AccelerationY, 
-            ""AccelerationZ"" = :AccelerationZ, ""RotationX"" = :RotationX, ""RotationY"" = :RotationY, ""RotationZ"" = :RotationZ, ""RotationW"" = :RotationW, 
-            ""SitTargetOffsetX"" = :SitTargetOffsetX, ""SitTargetOffsetY"" = :SitTargetOffsetY, ""SitTargetOffsetZ"" = :SitTargetOffsetZ, 
-            ""SitTargetOrientW"" = :SitTargetOrientW, ""SitTargetOrientX"" = :SitTargetOrientX, ""SitTargetOrientY"" = :SitTargetOrientY, 
-            ""SitTargetOrientZ"" = :SitTargetOrientZ, ""RegionUUID"" = :RegionUUID, ""CreatorID"" = :CreatorID, ""OwnerID"" = :OwnerID, ""GroupID"" = :GroupID, 
-            ""LastOwnerID"" = :LastOwnerID, ""SceneGroupID"" = :SceneGroupID, ""PayPrice"" = :PayPrice, ""PayButton1"" = :PayButton1, ""PayButton2"" = :PayButton2, 
-            ""PayButton3"" = :PayButton3, ""PayButton4"" = :PayButton4, ""LoopedSound"" = :LoopedSound, ""LoopedSoundGain"" = :LoopedSoundGain, 
-            ""TextureAnimation"" = :TextureAnimation, ""OmegaX"" = :OmegaX, ""OmegaY"" = :OmegaY, ""OmegaZ"" = :OmegaZ, ""CameraEyeOffsetX"" = :CameraEyeOffsetX, 
-            ""CameraEyeOffsetY"" = :CameraEyeOffsetY, ""CameraEyeOffsetZ"" = :CameraEyeOffsetZ, ""CameraAtOffsetX"" = :CameraAtOffsetX, 
-            ""CameraAtOffsetY"" = :CameraAtOffsetY, ""CameraAtOffsetZ"" = :CameraAtOffsetZ, ""ForceMouselook"" = :ForceMouselook, 
-            ""ScriptAccessPin"" = :ScriptAccessPin, ""AllowedDrop"" = :AllowedDrop, ""DieAtEdge"" = :DieAtEdge, ""SalePrice"" = :SalePrice, 
-            ""SaleType"" = :SaleType, ""ColorR"" = :ColorR, ""ColorG"" = :ColorG, ""ColorB"" = :ColorB, ""ColorA"" = :ColorA, ""ParticleSystem"" = :ParticleSystem, 
-            ""ClickAction"" = :ClickAction, ""Material"" = :Material, ""CollisionSound"" = :CollisionSound, ""CollisionSoundVolume"" = :CollisionSoundVolume, ""PassTouches"" = :PassTouches, ""PassCollisions"" = :PassCollisions,
-            ""LinkNumber"" = :LinkNumber, ""MediaURL"" = :MediaURL, ""KeyframeMotion"" = :KeyframeMotion, ""AttachedPosX"" = :AttachedPosX, ""AttachedPosY"" = :AttachedPosY, ""AttachedPosZ"" = :AttachedPosZ, ""DynAttrs"" = :DynAttrs,
-            ""PhysicsShapeType"" = :PhysicsShapeType, ""Density"" = :Density, ""GravityModifier"" = :GravityModifier, ""Friction"" = :Friction, ""Restitution"" = :Restitution, ""Vehicle"" = :Vehicle, ""RotationAxisLocks"" = :RotationAxisLocks
+        UPDATE prims SET
+            ""CreationDate"" = :CreationDate, ""Name"" = :Name, ""Text"" = :Text, ""Description"" = :Description, ""SitName"" = :SitName,
+            ""TouchName"" = :TouchName, ""ObjectFlags"" = :ObjectFlags, ""OwnerMask"" = :OwnerMask, ""NextOwnerMask"" = :NextOwnerMask, ""GroupMask"" = :GroupMask,
+            ""EveryoneMask"" = :EveryoneMask, ""BaseMask"" = :BaseMask, ""PositionX"" = :PositionX, ""PositionY"" = :PositionY, ""PositionZ"" = :PositionZ,
+            ""GroupPositionX"" = :GroupPositionX, ""GroupPositionY"" = :GroupPositionY, ""GroupPositionZ"" = :GroupPositionZ, ""VelocityX"" = :VelocityX,
+            ""VelocityY"" = :VelocityY, ""VelocityZ"" = :VelocityZ, ""AngularVelocityX"" = :AngularVelocityX, ""AngularVelocityY"" = :AngularVelocityY,
+            ""AngularVelocityZ"" = :AngularVelocityZ, ""AccelerationX"" = :AccelerationX, ""AccelerationY"" = :AccelerationY,
+            ""AccelerationZ"" = :AccelerationZ, ""RotationX"" = :RotationX, ""RotationY"" = :RotationY, ""RotationZ"" = :RotationZ, ""RotationW"" = :RotationW,
+            ""SitTargetOffsetX"" = :SitTargetOffsetX, ""SitTargetOffsetY"" = :SitTargetOffsetY, ""SitTargetOffsetZ"" = :SitTargetOffsetZ,
+            ""SitTargetOrientW"" = :SitTargetOrientW, ""SitTargetOrientX"" = :SitTargetOrientX, ""SitTargetOrientY"" = :SitTargetOrientY,
+            ""SitTargetOrientZ"" = :SitTargetOrientZ, ""RegionUUID"" = :RegionUUID, ""CreatorID"" = :CreatorID, ""OwnerID"" = :OwnerID, ""GroupID"" = :GroupID,
+            ""LastOwnerID"" = :LastOwnerID, ""SceneGroupID"" = :SceneGroupID, ""PayPrice"" = :PayPrice, ""PayButton1"" = :PayButton1, ""PayButton2"" = :PayButton2,
+            ""PayButton3"" = :PayButton3, ""PayButton4"" = :PayButton4, ""LoopedSound"" = :LoopedSound, ""LoopedSoundGain"" = :LoopedSoundGain,
+            ""TextureAnimation"" = :TextureAnimation, ""OmegaX"" = :OmegaX, ""OmegaY"" = :OmegaY, ""OmegaZ"" = :OmegaZ, ""CameraEyeOffsetX"" = :CameraEyeOffsetX,
+            ""CameraEyeOffsetY"" = :CameraEyeOffsetY, ""CameraEyeOffsetZ"" = :CameraEyeOffsetZ, ""CameraAtOffsetX"" = :CameraAtOffsetX,
+            ""CameraAtOffsetY"" = :CameraAtOffsetY, ""CameraAtOffsetZ"" = :CameraAtOffsetZ, ""ForceMouselook"" = :ForceMouselook,
+            ""ScriptAccessPin"" = :ScriptAccessPin, ""AllowedDrop"" = :AllowedDrop, ""DieAtEdge"" = :DieAtEdge, ""SalePrice"" = :SalePrice,
+            ""SaleType"" = :SaleType, ""ColorR"" = :ColorR, ""ColorG"" = :ColorG, ""ColorB"" = :ColorB, ""ColorA"" = :ColorA, ""ParticleSystem"" = :ParticleSystem,
+            ""ClickAction"" = :ClickAction, ""Material"" = :Material, ""CollisionSound"" = :CollisionSound, ""CollisionSoundVolume"" = :CollisionSoundVolume, ""PassTouches"" = :PassTouches,
+            ""LinkNumber"" = :LinkNumber, ""MediaURL"" = :MediaURL, ""DynAttrs"" = :DynAttrs,
+            ""PhysicsShapeType"" = :PhysicsShapeType, ""Density"" = :Density, ""GravityModifier"" = :GravityModifier, ""Friction"" = :Friction, ""Restitution"" = :Restitution
         WHERE ""UUID"" = :UUID ;
 
-        INSERT INTO 
+        INSERT INTO
             prims (
             ""UUID"", ""CreationDate"", ""Name"", ""Text"", ""Description"", ""SitName"", ""TouchName"", ""ObjectFlags"", ""OwnerMask"", ""NextOwnerMask"", ""GroupMask"",
-            ""EveryoneMask"", ""BaseMask"", ""PositionX"", ""PositionY"", ""PositionZ"", ""GroupPositionX"", ""GroupPositionY"", ""GroupPositionZ"", ""VelocityX"", 
-            ""VelocityY"", ""VelocityZ"", ""AngularVelocityX"", ""AngularVelocityY"", ""AngularVelocityZ"", ""AccelerationX"", ""AccelerationY"", ""AccelerationZ"", 
-            ""RotationX"", ""RotationY"", ""RotationZ"", ""RotationW"", ""SitTargetOffsetX"", ""SitTargetOffsetY"", ""SitTargetOffsetZ"", ""SitTargetOrientW"", 
-            ""SitTargetOrientX"", ""SitTargetOrientY"", ""SitTargetOrientZ"", ""RegionUUID"", ""CreatorID"", ""OwnerID"", ""GroupID"", ""LastOwnerID"", ""SceneGroupID"", 
-            ""PayPrice"", ""PayButton1"", ""PayButton2"", ""PayButton3"", ""PayButton4"", ""LoopedSound"", ""LoopedSoundGain"", ""TextureAnimation"", ""OmegaX"", 
-            ""OmegaY"", ""OmegaZ"", ""CameraEyeOffsetX"", ""CameraEyeOffsetY"", ""CameraEyeOffsetZ"", ""CameraAtOffsetX"", ""CameraAtOffsetY"", ""CameraAtOffsetZ"", 
-            ""ForceMouselook"", ""ScriptAccessPin"", ""AllowedDrop"", ""DieAtEdge"", ""SalePrice"", ""SaleType"", ""ColorR"", ""ColorG"", ""ColorB"", ""ColorA"", 
-            ""ParticleSystem"", ""ClickAction"", ""Material"", ""CollisionSound"", ""CollisionSoundVolume"", ""PassTouches"", ""PassCollisions"", ""LinkNumber"",
-            ""MediaURL"", ""KeyframeMotion"", ""AttachedPosX"", ""AttachedPosY"", ""AttachedPosZ"", ""DynAttrs"",
-            ""PhysicsShapeType"", ""Density"", ""GravityModifier"", ""Friction"", ""Restitution"", ""Vehicle"", ""RotationAxisLocks""
-            ) Select 
-            :UUID, :CreationDate, :Name, :Text, :Description, :SitName, :TouchName, :ObjectFlags, :OwnerMask, :NextOwnerMask, :GroupMask, 
-            :EveryoneMask, :BaseMask, :PositionX, :PositionY, :PositionZ, :GroupPositionX, :GroupPositionY, :GroupPositionZ, :VelocityX, 
-            :VelocityY, :VelocityZ, :AngularVelocityX, :AngularVelocityY, :AngularVelocityZ, :AccelerationX, :AccelerationY, :AccelerationZ, 
-            :RotationX, :RotationY, :RotationZ, :RotationW, :SitTargetOffsetX, :SitTargetOffsetY, :SitTargetOffsetZ, :SitTargetOrientW, 
-            :SitTargetOrientX, :SitTargetOrientY, :SitTargetOrientZ, :RegionUUID, :CreatorID, :OwnerID, :GroupID, :LastOwnerID, :SceneGroupID, 
-            :PayPrice, :PayButton1, :PayButton2, :PayButton3, :PayButton4, :LoopedSound, :LoopedSoundGain, :TextureAnimation, :OmegaX, 
-            :OmegaY, :OmegaZ, :CameraEyeOffsetX, :CameraEyeOffsetY, :CameraEyeOffsetZ, :CameraAtOffsetX, :CameraAtOffsetY, :CameraAtOffsetZ, 
-            :ForceMouselook, :ScriptAccessPin, :AllowedDrop, :DieAtEdge, :SalePrice, :SaleType, :ColorR, :ColorG, :ColorB, :ColorA, 
-            :ParticleSystem, :ClickAction, :Material, :CollisionSound, :CollisionSoundVolume, :PassTouches, :PassCollisions, :LinkNumber,
-            :MediaURL, :KeyframeMotion, :AttachedPosX, :AttachedPosY, :AttachedPosZ, :DynAttrs,
-            :PhysicsShapeType, :Density, :GravityModifier, :Friction, :Restitution, :Vehicle, :RotationAxisLocks
+            ""EveryoneMask"", ""BaseMask"", ""PositionX"", ""PositionY"", ""PositionZ"", ""GroupPositionX"", ""GroupPositionY"", ""GroupPositionZ"", ""VelocityX"",
+            ""VelocityY"", ""VelocityZ"", ""AngularVelocityX"", ""AngularVelocityY"", ""AngularVelocityZ"", ""AccelerationX"", ""AccelerationY"", ""AccelerationZ"",
+            ""RotationX"", ""RotationY"", ""RotationZ"", ""RotationW"", ""SitTargetOffsetX"", ""SitTargetOffsetY"", ""SitTargetOffsetZ"", ""SitTargetOrientW"",
+            ""SitTargetOrientX"", ""SitTargetOrientY"", ""SitTargetOrientZ"", ""RegionUUID"", ""CreatorID"", ""OwnerID"", ""GroupID"", ""LastOwnerID"", ""SceneGroupID"",
+            ""PayPrice"", ""PayButton1"", ""PayButton2"", ""PayButton3"", ""PayButton4"", ""LoopedSound"", ""LoopedSoundGain"", ""TextureAnimation"", ""OmegaX"",
+            ""OmegaY"", ""OmegaZ"", ""CameraEyeOffsetX"", ""CameraEyeOffsetY"", ""CameraEyeOffsetZ"", ""CameraAtOffsetX"", ""CameraAtOffsetY"", ""CameraAtOffsetZ"",
+            ""ForceMouselook"", ""ScriptAccessPin"", ""AllowedDrop"", ""DieAtEdge"", ""SalePrice"", ""SaleType"", ""ColorR"", ""ColorG"", ""ColorB"", ""ColorA"",
+            ""ParticleSystem"", ""ClickAction"", ""Material"", ""CollisionSound"", ""CollisionSoundVolume"", ""PassTouches"", ""LinkNumber"", ""MediaURL"", ""DynAttrs"",
+            ""PhysicsShapeType"", ""Density"", ""GravityModifier"", ""Friction"", ""Restitution""
+            ) Select
+            :UUID, :CreationDate, :Name, :Text, :Description, :SitName, :TouchName, :ObjectFlags, :OwnerMask, :NextOwnerMask, :GroupMask,
+            :EveryoneMask, :BaseMask, :PositionX, :PositionY, :PositionZ, :GroupPositionX, :GroupPositionY, :GroupPositionZ, :VelocityX,
+            :VelocityY, :VelocityZ, :AngularVelocityX, :AngularVelocityY, :AngularVelocityZ, :AccelerationX, :AccelerationY, :AccelerationZ,
+            :RotationX, :RotationY, :RotationZ, :RotationW, :SitTargetOffsetX, :SitTargetOffsetY, :SitTargetOffsetZ, :SitTargetOrientW,
+            :SitTargetOrientX, :SitTargetOrientY, :SitTargetOrientZ, :RegionUUID, :CreatorID, :OwnerID, :GroupID, :LastOwnerID, :SceneGroupID,
+            :PayPrice, :PayButton1, :PayButton2, :PayButton3, :PayButton4, :LoopedSound, :LoopedSoundGain, :TextureAnimation, :OmegaX,
+            :OmegaY, :OmegaZ, :CameraEyeOffsetX, :CameraEyeOffsetY, :CameraEyeOffsetZ, :CameraAtOffsetX, :CameraAtOffsetY, :CameraAtOffsetZ,
+            :ForceMouselook, :ScriptAccessPin, :AllowedDrop, :DieAtEdge, :SalePrice, :SaleType, :ColorR, :ColorG, :ColorB, :ColorA,
+            :ParticleSystem, :ClickAction, :Material, :CollisionSound, :CollisionSoundVolume, :PassTouches, :LinkNumber, :MediaURL, :DynAttrs,
+            :PhysicsShapeType, :Density, :GravityModifier, :Friction, :Restitution
             where not EXISTS (SELECT ""UUID"" FROM prims WHERE ""UUID"" = :UUID);
         ";
 
@@ -402,27 +401,27 @@ namespace OpenSim.Data.PGSQL
         private void StoreSceneObjectPrimShapes(SceneObjectPart sceneObjectPart, NpgsqlCommand sqlCommand, UUID sceneGroupID, UUID regionUUID)
         {
             //Big query to or insert or update primshapes
-            
+
             string queryPrimShapes = @"
-        UPDATE primshapes SET 
-            ""Shape"" = :Shape, ""ScaleX"" = :ScaleX, ""ScaleY"" = :ScaleY, ""ScaleZ"" = :ScaleZ, ""PCode"" = :PCode, ""PathBegin"" = :PathBegin, 
-            ""PathEnd"" = :PathEnd, ""PathScaleX"" = :PathScaleX, ""PathScaleY"" = :PathScaleY, ""PathShearX"" = :PathShearX, ""PathShearY"" = :PathShearY, 
-            ""PathSkew"" = :PathSkew, ""PathCurve"" = :PathCurve, ""PathRadiusOffset"" = :PathRadiusOffset, ""PathRevolutions"" = :PathRevolutions, 
-            ""PathTaperX"" = :PathTaperX, ""PathTaperY"" = :PathTaperY, ""PathTwist"" = :PathTwist, ""PathTwistBegin"" = :PathTwistBegin, 
-            ""ProfileBegin"" = :ProfileBegin, ""ProfileEnd"" = :ProfileEnd, ""ProfileCurve"" = :ProfileCurve, ""ProfileHollow"" = :ProfileHollow, 
-            ""Texture"" = :Texture, ""ExtraParams"" = :ExtraParams, ""State"" = :State, ""LastAttachPoint"" = :LastAttachPoint, ""Media"" = :Media
+        UPDATE primshapes SET
+            ""Shape"" = :Shape, ""ScaleX"" = :ScaleX, ""ScaleY"" = :ScaleY, ""ScaleZ"" = :ScaleZ, ""PCode"" = :PCode, ""PathBegin"" = :PathBegin,
+            ""PathEnd"" = :PathEnd, ""PathScaleX"" = :PathScaleX, ""PathScaleY"" = :PathScaleY, ""PathShearX"" = :PathShearX, ""PathShearY"" = :PathShearY,
+            ""PathSkew"" = :PathSkew, ""PathCurve"" = :PathCurve, ""PathRadiusOffset"" = :PathRadiusOffset, ""PathRevolutions"" = :PathRevolutions,
+            ""PathTaperX"" = :PathTaperX, ""PathTaperY"" = :PathTaperY, ""PathTwist"" = :PathTwist, ""PathTwistBegin"" = :PathTwistBegin,
+            ""ProfileBegin"" = :ProfileBegin, ""ProfileEnd"" = :ProfileEnd, ""ProfileCurve"" = :ProfileCurve, ""ProfileHollow"" = :ProfileHollow,
+            ""Texture"" = :Texture, ""ExtraParams"" = :ExtraParams, ""State"" = :State, ""Media"" = :Media
         WHERE ""UUID"" = :UUID ;
 
-        INSERT INTO 
+        INSERT INTO
             primshapes (
-            ""UUID"", ""Shape"", ""ScaleX"", ""ScaleY"", ""ScaleZ"", ""PCode"", ""PathBegin"", ""PathEnd"", ""PathScaleX"", ""PathScaleY"", ""PathShearX"", ""PathShearY"", 
-            ""PathSkew"", ""PathCurve"", ""PathRadiusOffset"", ""PathRevolutions"", ""PathTaperX"", ""PathTaperY"", ""PathTwist"", ""PathTwistBegin"", ""ProfileBegin"", 
-            ""ProfileEnd"", ""ProfileCurve"", ""ProfileHollow"", ""Texture"", ""ExtraParams"", ""State"", ""LastAttachPoint"", ""Media""
-            ) 
+            ""UUID"", ""Shape"", ""ScaleX"", ""ScaleY"", ""ScaleZ"", ""PCode"", ""PathBegin"", ""PathEnd"", ""PathScaleX"", ""PathScaleY"", ""PathShearX"", ""PathShearY"",
+            ""PathSkew"", ""PathCurve"", ""PathRadiusOffset"", ""PathRevolutions"", ""PathTaperX"", ""PathTaperY"", ""PathTwist"", ""PathTwistBegin"", ""ProfileBegin"",
+            ""ProfileEnd"", ""ProfileCurve"", ""ProfileHollow"", ""Texture"", ""ExtraParams"", ""State"", ""Media""
+            )
             Select
-            :UUID, :Shape, :ScaleX, :ScaleY, :ScaleZ, :PCode, :PathBegin, :PathEnd, :PathScaleX, :PathScaleY, :PathShearX, :PathShearY, 
-            :PathSkew, :PathCurve, :PathRadiusOffset, :PathRevolutions, :PathTaperX, :PathTaperY, :PathTwist, :PathTwistBegin, :ProfileBegin, 
-            :ProfileEnd, :ProfileCurve, :ProfileHollow, :Texture, :ExtraParams, :State, :LastAttachPoint, :Media
+            :UUID, :Shape, :ScaleX, :ScaleY, :ScaleZ, :PCode, :PathBegin, :PathEnd, :PathScaleX, :PathScaleY, :PathShearX, :PathShearY,
+            :PathSkew, :PathCurve, :PathRadiusOffset, :PathRevolutions, :PathTaperX, :PathTaperY, :PathTwist, :PathTwistBegin, :ProfileBegin,
+            :ProfileEnd, :ProfileCurve, :ProfileHollow, :Texture, :ExtraParams, :State, :Media
         where not EXISTS (SELECT ""UUID"" FROM primshapes WHERE ""UUID"" = :UUID);
         ";
 
@@ -501,7 +500,7 @@ namespace OpenSim.Data.PGSQL
             sql =
                 @"INSERT INTO primitems (
             ""itemID"",""primID"",""assetID"",""parentFolderID"",""invType"",""assetType"",""name"",""description"",""creationDate"",""creatorID"",""ownerID"",""lastOwnerID"",""groupID"",
-            ""nextPermissions"",""currentPermissions"",""basePermissions"",""everyonePermissions"",""groupPermissions"",""flags"") 
+            ""nextPermissions"",""currentPermissions"",""basePermissions"",""everyonePermissions"",""groupPermissions"",""flags"")
             VALUES (:itemID,:primID,:assetID,:parentFolderID,:invType,:assetType,:name,:description,:creationDate,:creatorID,:ownerID,
             :lastOwnerID,:groupID,:nextPermissions,:currentPermissions,:basePermissions,:everyonePermissions,:groupPermissions,:flags)";
 
@@ -519,89 +518,6 @@ namespace OpenSim.Data.PGSQL
         }
 
         #endregion
-
-        public TerrainData LoadBakedTerrain(UUID regionID, int pSizeX, int pSizeY, int pSizeZ)
-        {
-            TerrainData terrData = null;
-
-            lock (m_dbLock)
-            {
-                using (NpgsqlConnection dbcon = new NpgsqlConnection(m_connectionString))
-                {
-                    dbcon.Open();
-
-                    using (NpgsqlCommand cmd = dbcon.CreateCommand())
-                    {
-                        cmd.CommandText = "select RegionUUID, Revision, Heightfield " +
-                            "from bakedterrain where RegionUUID = :RegionUUID ";
-                        cmd.Parameters.AddWithValue("RegionUUID", regionID.ToString());
-
-                        using (IDataReader reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                int rev = Convert.ToInt32(reader["Revision"]);
-                                if ((reader["Heightfield"] != DBNull.Value))
-                                {
-                                    byte[] blob = (byte[])reader["Heightfield"];
-                                    terrData = TerrainData.CreateFromDatabaseBlobFactory(pSizeX, pSizeY, pSizeZ, rev, blob);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            return terrData;
-        }
-
-
-        public void StoreBakedTerrain(TerrainData terrData, UUID regionID)
-        {
-            Util.FireAndForget(delegate(object x)
-            {
-                _Log.Info("[REGION DB]: Storing Baked terrain");
-
-                lock (m_dbLock)
-                {
-                    using (NpgsqlConnection dbcon = new NpgsqlConnection(m_connectionString))
-                    {
-                        dbcon.Open();
-
-                        using (NpgsqlCommand cmd = dbcon.CreateCommand())
-                        {
-                            cmd.CommandText = "delete from bakedterrain where RegionUUID = :RegionUUID";
-                            cmd.Parameters.AddWithValue("RegionUUID", regionID.ToString());
-
-                            using (NpgsqlCommand cmd2 = dbcon.CreateCommand())
-                            {
-                                try
-                                {
-                                    cmd2.CommandText = "insert into bakedterrain (RegionUUID, " +
-                                            "Revision, Heightfield) values (:RegionUUID, " +
-                                            ":Revision, :Heightfield)";
-
-                                    int terrainDBRevision;
-                                    Array terrainDBblob;
-                                    terrData.GetDatabaseBlob(out terrainDBRevision, out terrainDBblob);
-
-                                    cmd2.Parameters.AddWithValue("RegionUUID", regionID.ToString());
-                                    cmd2.Parameters.AddWithValue("Revision", terrainDBRevision);
-                                    cmd2.Parameters.AddWithValue("Heightfield", terrainDBblob);
-
-                                    cmd.ExecuteNonQuery();
-                                    cmd2.ExecuteNonQuery();
-                                }
-                                catch (Exception e)
-                                {
-                                    _Log.ErrorFormat(e.ToString());
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
 
         /// <summary>
         /// Loads the terrain map.
@@ -622,7 +538,7 @@ namespace OpenSim.Data.PGSQL
         {
             TerrainData terrData = null;
 
-            string sql = @"select ""RegionUUID"", ""Revision"", ""Heightfield"" from terrain 
+            string sql = @"select ""RegionUUID"", ""Revision"", ""Heightfield"" from terrain
                             where ""RegionUUID"" = :RegionUUID order by ""Revision"" desc limit 1; ";
 
             using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
@@ -638,8 +554,11 @@ namespace OpenSim.Data.PGSQL
                         if (reader.Read())
                         {
                             rev = Convert.ToInt32(reader["Revision"]);
-                            byte[] blob = (byte[])reader["Heightfield"];
-                            terrData = TerrainData.CreateFromDatabaseBlobFactory(pSizeX, pSizeY, pSizeZ, rev, blob);
+                            if ((reader["Heightfield"] != DBNull.Value))
+                            {
+                                byte[] blob = (byte[])reader["Heightfield"];
+                                terrData = TerrainData.CreateFromDatabaseBlobFactory(pSizeX, pSizeY, pSizeZ, rev, blob);
+                            }
                         }
                         else
                         {
@@ -647,6 +566,39 @@ namespace OpenSim.Data.PGSQL
                             return null;
                         }
                         _Log.Info("[REGION DB]: Loaded terrain revision r" + rev);
+                    }
+                }
+            }
+
+            return terrData;
+        }
+
+        public TerrainData LoadBakedTerrain(UUID regionID, int pSizeX, int pSizeY, int pSizeZ)
+        {
+            TerrainData terrData = null;
+
+            string sql = @"select ""RegionUUID"", ""Revision"", ""Heightfield"" from bakedterrain
+                            where ""RegionUUID"" = :RegionUUID; ";
+
+            using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
+            {
+                using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn))
+                {
+                    // PGSqlParameter param = new PGSqlParameter();
+                    cmd.Parameters.Add(_Database.CreateParameter("RegionUUID", regionID));
+                    conn.Open();
+                    using (NpgsqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        int rev;
+                        if (reader.Read())
+                        {
+                            rev = Convert.ToInt32(reader["Revision"]);
+                            if ((reader["Heightfield"] != DBNull.Value))
+                            {
+                                byte[] blob = (byte[])reader["Heightfield"];
+                                terrData = TerrainData.CreateFromDatabaseBlobFactory(pSizeX, pSizeY, pSizeZ, rev, blob);
+                            }
+                        }
                     }
                 }
             }
@@ -702,6 +654,49 @@ namespace OpenSim.Data.PGSQL
                 }
             }
 
+        }
+
+        /// <summary>
+        /// Stores the baked terrain map to DB.
+        /// </summary>
+        /// <param name="terrain">terrain map data.</param>
+        /// <param name="regionID">regionID.</param>
+        public void StoreBakedTerrain(TerrainData terrData, UUID regionID)
+        {
+            //Delete old terrain map
+            string sql = @"delete from bakedterrain where ""RegionUUID""=:RegionUUID";
+            using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
+            {
+                using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn))
+                {
+                    cmd.Parameters.Add(_Database.CreateParameter("RegionUUID", regionID));
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+
+                    _Log.InfoFormat("{0} Deleted bakedterrain id = {1}", LogHeader, regionID);
+                }
+            }
+
+            int terrainDBRevision;
+            Array terrainDBblob;
+            terrData.GetDatabaseBlob(out terrainDBRevision, out terrainDBblob);
+
+            sql = @"insert into bakedterrain(""RegionUUID"", ""Revision"", ""Heightfield"") values(:RegionUUID, :Revision, :Heightfield)";
+
+            using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
+            {
+                using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn))
+                {
+                    cmd.Parameters.Add(_Database.CreateParameter("RegionUUID", regionID));
+                    cmd.Parameters.Add(_Database.CreateParameter("Revision", terrainDBRevision));
+                    cmd.Parameters.Add(_Database.CreateParameter("Heightfield", terrainDBblob));
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+
+                    _Log.InfoFormat("{0} Stored bakedterrain id = {1}, terrainSize = <{2},{3}>",
+                                    LogHeader, regionID, terrData.SizeX, terrData.SizeY);
+                }
+            }
         }
 
         /// <summary>
@@ -769,11 +764,14 @@ namespace OpenSim.Data.PGSQL
             string sql = @"INSERT INTO land
                 (""UUID"",""RegionUUID"",""LocalLandID"",""Bitmap"",""Name"",""Description"",""OwnerUUID"",""IsGroupOwned"",""Area"",""AuctionID"",""Category"",""ClaimDate"",""ClaimPrice"",
                  ""GroupUUID"",""SalePrice"",""LandStatus"",""LandFlags"",""LandingType"",""MediaAutoScale"",""MediaTextureUUID"",""MediaURL"",""MusicURL"",""PassHours"",""PassPrice"",
-                 ""SnapshotUUID"",""UserLocationX"",""UserLocationY"",""UserLocationZ"",""UserLookAtX"",""UserLookAtY"",""UserLookAtZ"",""AuthbuyerID"",""OtherCleanTime"",""Dwell"",""MediaType"",""MediaDescription"",""MediaSize"",""MediaLoop"",""ObscureMusic"",""ObscureMedia"",""SeeAVs"",""AnyAVSounds"",""GroupAVSounds"")
+                 ""SnapshotUUID"",""UserLocationX"",""UserLocationY"",""UserLocationZ"",""UserLookAtX"",""UserLookAtY"",""UserLookAtZ"",""AuthbuyerID"",""OtherCleanTime"",""Dwell"",
+                 ""MediaType"",""MediaDescription"",""MediaSize"",""MediaLoop"",""ObscureMusic"",""ObscureMedia"",""SeeAVs"",""AnyAVSounds"",""GroupAVSounds"")
                 VALUES
                 (:UUID,:RegionUUID,:LocalLandID,:Bitmap,:Name,:Description,:OwnerUUID,:IsGroupOwned,:Area,:AuctionID,:Category,:ClaimDate,:ClaimPrice,
                  :GroupUUID,:SalePrice,:LandStatus,:LandFlags,:LandingType,:MediaAutoScale,:MediaTextureUUID,:MediaURL,:MusicURL,:PassHours,:PassPrice,
-                 :SnapshotUUID,:UserLocationX,:UserLocationY,:UserLocationZ,:UserLookAtX,:UserLookAtY,:UserLookAtZ,:AuthbuyerID,:OtherCleanTime,:Dwell,:MediaType,:MediaDescription,:MediaWidth||','||:MediaHeight,:MediaLoop,:ObscureMusic,:ObscureMedia,:SeeAVs,:AnyAVSounds,:GroupAVSounds)";
+                 :SnapshotUUID,:UserLocationX,:UserLocationY,:UserLocationZ,:UserLookAtX,:UserLookAtY,:UserLookAtZ,:AuthbuyerID,:OtherCleanTime,:Dwell,
+                 :MediaType,:MediaDescription,:MediaWidth::text || ',' || :MediaHeight::text,:MediaLoop,:ObscureMusic,:ObscureMedia,:SeeAVs::int::smallint,
+                 :AnyAVSounds::int::smallint,:GroupAVSounds::int::smallint)";
 
             using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn))
@@ -783,7 +781,7 @@ namespace OpenSim.Data.PGSQL
                 cmd.ExecuteNonQuery();
             }
 
-            sql = @"INSERT INTO landaccesslist (""LandUUID"",""AccessUUID"",""Flags"",""Expires"") VALUES (:LandUUID,:AccessUUID,:Flags,:Expires)";
+            sql = @"INSERT INTO landaccesslist (""LandUUID"",""AccessUUID"",""LandFlags"",""Expires"") VALUES (:LandUUID,:AccessUUID,:Flags,:Expires)";
 
             using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn))
@@ -1321,7 +1319,7 @@ namespace OpenSim.Data.PGSQL
         {
             {
                 string sql = "DELETE FROM regionenvironment WHERE region_id = :region_id ;";
-                
+
                 using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
                 using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn))
                 {
@@ -1422,17 +1420,17 @@ namespace OpenSim.Data.PGSQL
             {
                 //This method only updates region settings!!! First call LoadRegionSettings to create new region settings in DB
                 sql =
-                   @"UPDATE regionsettings SET block_terraform = :block_terraform ,block_fly = :block_fly ,allow_damage = :allow_damage 
-,restrict_pushing = :restrict_pushing ,allow_land_resell = :allow_land_resell ,allow_land_join_divide = :allow_land_join_divide 
-,block_show_in_search = :block_show_in_search ,agent_limit = :agent_limit ,object_bonus = :object_bonus ,maturity = :maturity 
-,disable_scripts = :disable_scripts ,disable_collisions = :disable_collisions ,disable_physics = :disable_physics 
-,terrain_texture_1 = :terrain_texture_1 ,terrain_texture_2 = :terrain_texture_2 ,terrain_texture_3 = :terrain_texture_3 
-,terrain_texture_4 = :terrain_texture_4 ,elevation_1_nw = :elevation_1_nw ,elevation_2_nw = :elevation_2_nw 
-,elevation_1_ne = :elevation_1_ne ,elevation_2_ne = :elevation_2_ne ,elevation_1_se = :elevation_1_se ,elevation_2_se = :elevation_2_se 
-,elevation_1_sw = :elevation_1_sw ,elevation_2_sw = :elevation_2_sw ,water_height = :water_height ,terrain_raise_limit = :terrain_raise_limit 
-,terrain_lower_limit = :terrain_lower_limit ,use_estate_sun = :use_estate_sun ,fixed_sun = :fixed_sun ,sun_position = :sun_position 
-,covenant = :covenant ,covenant_datetime = :covenant_datetime, sunvectorx = :sunvectorx, sunvectory = :sunvectory, sunvectorz = :sunvectorz,  
-""Sandbox"" = :Sandbox, loaded_creation_datetime = :loaded_creation_datetime, loaded_creation_id = :loaded_creation_id, ""map_tile_ID"" = :TerrainImageID, ""block_search"" = :block_search, ""casino"" = :casino, 
+                   @"UPDATE regionsettings SET block_terraform = :block_terraform ,block_fly = :block_fly ,allow_damage = :allow_damage
+,restrict_pushing = :restrict_pushing ,allow_land_resell = :allow_land_resell ,allow_land_join_divide = :allow_land_join_divide
+,block_show_in_search = :block_show_in_search ,agent_limit = :agent_limit ,object_bonus = :object_bonus ,maturity = :maturity
+,disable_scripts = :disable_scripts ,disable_collisions = :disable_collisions ,disable_physics = :disable_physics
+,terrain_texture_1 = :terrain_texture_1 ,terrain_texture_2 = :terrain_texture_2 ,terrain_texture_3 = :terrain_texture_3
+,terrain_texture_4 = :terrain_texture_4 ,elevation_1_nw = :elevation_1_nw ,elevation_2_nw = :elevation_2_nw
+,elevation_1_ne = :elevation_1_ne ,elevation_2_ne = :elevation_2_ne ,elevation_1_se = :elevation_1_se ,elevation_2_se = :elevation_2_se
+,elevation_1_sw = :elevation_1_sw ,elevation_2_sw = :elevation_2_sw ,water_height = :water_height ,terrain_raise_limit = :terrain_raise_limit
+,terrain_lower_limit = :terrain_lower_limit ,use_estate_sun = :use_estate_sun ,fixed_sun = :fixed_sun ,sun_position = :sun_position
+,covenant = :covenant ,covenant_datetime = :covenant_datetime, sunvectorx = :sunvectorx, sunvectory = :sunvectory, sunvectorz = :sunvectorz,
+""Sandbox"" = :Sandbox, loaded_creation_datetime = :loaded_creation_datetime, loaded_creation_id = :loaded_creation_id, ""map_tile_ID"" = :TerrainImageID,
 ""TelehubObject"" = :telehubobject, ""parcel_tile_ID"" = :ParcelImageID
  WHERE ""regionUUID"" = :regionUUID";
 
@@ -1466,15 +1464,15 @@ namespace OpenSim.Data.PGSQL
                                 terrain_texture_1,terrain_texture_2,terrain_texture_3,terrain_texture_4,elevation_1_nw,elevation_2_nw,elevation_1_ne,
                                 elevation_2_ne,elevation_1_se,elevation_2_se,elevation_1_sw,elevation_2_sw,water_height,terrain_raise_limit,
                                 terrain_lower_limit,use_estate_sun,fixed_sun,sun_position,covenant,covenant_datetime,sunvectorx, sunvectory, sunvectorz,
-                                ""Sandbox"", loaded_creation_datetime, loaded_creation_id,block_search,casino
-                                ) 
+                                ""Sandbox"", loaded_creation_datetime, loaded_creation_id
+                                )
                             VALUES
                                 (:regionUUID,:block_terraform,:block_fly,:allow_damage,:restrict_pushing,:allow_land_resell,:allow_land_join_divide,
                                 :block_show_in_search,:agent_limit,:object_bonus,:maturity,:disable_scripts,:disable_collisions,:disable_physics,
                                 :terrain_texture_1,:terrain_texture_2,:terrain_texture_3,:terrain_texture_4,:elevation_1_nw,:elevation_2_nw,:elevation_1_ne,
                                 :elevation_2_ne,:elevation_1_se,:elevation_2_se,:elevation_1_sw,:elevation_2_sw,:water_height,:terrain_raise_limit,
-                                :terrain_lower_limit,:use_estate_sun,:fixed_sun,:sun_position,:covenant, :covenant_datetime, :sunvectorx,:sunvectory, 
-                                :sunvectorz, :Sandbox, :loaded_creation_datetime, :loaded_creation_id, :block_search, :casino )";
+                                :terrain_lower_limit,:use_estate_sun,:fixed_sun,:sun_position,:covenant, :covenant_datetime, :sunvectorx,:sunvectory,
+                                :sunvectorz, :Sandbox, :loaded_creation_datetime, :loaded_creation_id )";
 
             using (NpgsqlConnection conn = new NpgsqlConnection(m_connectionString))
             using (NpgsqlCommand cmd = new NpgsqlCommand(sql, conn))
@@ -1548,9 +1546,6 @@ namespace OpenSim.Data.PGSQL
             newSettings.ParcelImageID = new UUID((Guid)row["parcel_tile_ID"]);
             newSettings.TelehubObject = new UUID((Guid)row["TelehubObject"]);
 
-            newSettings.GodBlockSearch = Convert.ToBoolean(row["block_search"]);
-            newSettings.Casino = Convert.ToBoolean(row["casino"]);
-
             return newSettings;
         }
 
@@ -1606,6 +1601,7 @@ namespace OpenSim.Data.PGSQL
             newData.OtherCleanTime = Convert.ToInt32(row["OtherCleanTime"]);
             newData.Dwell = Convert.ToSingle(row["Dwell"]);
 
+
             try
             {
                 newData.UserLocation =
@@ -1631,12 +1627,9 @@ namespace OpenSim.Data.PGSQL
             newData.ObscureMusic = Convert.ToBoolean(row["ObscureMusic"]);
             newData.ObscureMedia = Convert.ToBoolean(row["ObscureMedia"]);
 
-            if (!(row["SeeAVs"] is System.DBNull))
-                newData.SeeAVs = Convert.ToBoolean(row["SeeAVs"]);
-            if (!(row["AnyAVSounds"] is System.DBNull))
-                newData.AnyAVSounds = Convert.ToBoolean(row["AnyAVSounds"]);
-            if (!(row["GroupAVSounds"] is System.DBNull))
-                newData.GroupAVSounds = Convert.ToBoolean(row["GroupAVSounds"]);
+            newData.SeeAVs = Convert.ToBoolean(row["SeeAVs"]);
+            newData.AnyAVSounds = Convert.ToBoolean(row["AnyAVSounds"]);
+            newData.GroupAVSounds = Convert.ToBoolean(row["GroupAVSounds"]);
 
             return newData;
         }
@@ -1789,53 +1782,20 @@ namespace OpenSim.Data.PGSQL
             prim.CollisionSoundVolume = Convert.ToSingle(primRow["CollisionSoundVolume"]);
 
             prim.PassTouches = (bool)primRow["PassTouches"];
-            prim.PassCollisions = Convert.ToBoolean(primRow["PassCollisions"]);
 
             if (!(primRow["MediaURL"] is System.DBNull))
                 prim.MediaUrl = (string)primRow["MediaURL"];
 
-            if (!(primRow["AttachedPosX"] is System.DBNull))
-            {
-                prim.AttachedPos = new Vector3(
-                    Convert.ToSingle(primRow["AttachedPosX"]),
-                    Convert.ToSingle(primRow["AttachedPosY"]),
-                    Convert.ToSingle(primRow["AttachedPosZ"])
-                );
-            }
-
             if (!(primRow["DynAttrs"] is System.DBNull) && (string)primRow["DynAttrs"] != "")
                 prim.DynAttrs = DAMap.FromXml((string)primRow["DynAttrs"]);
             else
-                prim.DynAttrs = new DAMap();          
-
-            if (!(primRow["KeyframeMotion"] is DBNull))
-            {
-                Byte[] data = (byte[])primRow["KeyframeMotion"];
-                if (data.Length > 0)
-                    prim.KeyframeMotion = KeyframeMotion.FromData(null, data);
-                else
-                    prim.KeyframeMotion = null;
-            }
-            else
-            {
-                prim.KeyframeMotion = null;
-            }
+                prim.DynAttrs = new DAMap();
 
             prim.PhysicsShapeType = Convert.ToByte(primRow["PhysicsShapeType"]);
             prim.Density = Convert.ToSingle(primRow["Density"]);
             prim.GravityModifier = Convert.ToSingle(primRow["GravityModifier"]);
             prim.Friction = Convert.ToSingle(primRow["Friction"]);
             prim.Restitution = Convert.ToSingle(primRow["Restitution"]);
-            prim.RotationAxisLocks = Convert.ToByte(primRow["RotationAxisLocks"]);
-
-            SOPVehicle vehicle = null;
-            
-            if (primRow["Vehicle"].ToString() != String.Empty)
-            {
-                vehicle = SOPVehicle.FromXml2(primRow["Vehicle"].ToString());
-                if (vehicle != null)
-                    prim.VehicleParams = vehicle;
-            }
 
             return prim;
         }
@@ -1888,9 +1848,6 @@ namespace OpenSim.Data.PGSQL
             catch (InvalidCastException)
             {
             }
-
-            if (!(shapeRow["LastAttachPoint"] is System.DBNull))
-                baseShape.LastAttachPoint = Convert.ToByte(shapeRow["LastAttachPoint"]);
 
             if (!(shapeRow["Media"] is System.DBNull))
             {
@@ -2023,9 +1980,6 @@ namespace OpenSim.Data.PGSQL
             parameters.Add(_Database.CreateParameter("Loaded_Creation_DateTime", settings.LoadedCreationDateTime));
             parameters.Add(_Database.CreateParameter("Loaded_Creation_ID", settings.LoadedCreationID));
             parameters.Add(_Database.CreateParameter("TerrainImageID", settings.TerrainImageID));
-            parameters.Add(_Database.CreateParameter("block_search", settings.GodBlockSearch));
-            parameters.Add(_Database.CreateParameter("casino", settings.Casino));
-
             parameters.Add(_Database.CreateParameter("ParcelImageID", settings.ParcelImageID));
             parameters.Add(_Database.CreateParameter("TelehubObject", settings.TelehubObject));
 
@@ -2241,39 +2195,22 @@ namespace OpenSim.Data.PGSQL
 
             parameters.Add(_Database.CreateParameter("CollisionSound", prim.CollisionSound));
             parameters.Add(_Database.CreateParameter("CollisionSoundVolume", prim.CollisionSoundVolume));
-            
-            parameters.Add(_Database.CreateParameter("PassTouches", prim.PassTouches));
 
-            parameters.Add(_Database.CreateParameter("PassCollisions", prim.PassCollisions));
+            parameters.Add(_Database.CreateParameter("PassTouches", prim.PassTouches));
 
             parameters.Add(_Database.CreateParameter("LinkNumber", prim.LinkNum));
             parameters.Add(_Database.CreateParameter("MediaURL", prim.MediaUrl));
-
-            parameters.Add(_Database.CreateParameter("AttachedPosX", (double)prim.AttachedPos.X));
-            parameters.Add(_Database.CreateParameter("AttachedPosY", (double)prim.AttachedPos.Y));
-            parameters.Add(_Database.CreateParameter("AttachedPosZ", (double)prim.AttachedPos.Z));
-
-            if (prim.KeyframeMotion != null)
-                parameters.Add(_Database.CreateParameter("KeyframeMotion", prim.KeyframeMotion.Serialize()));
-            else
-                parameters.Add(_Database.CreateParameter("KeyframeMotion", new Byte[0]));
-            
-            if (prim.VehicleParams != null)
-                parameters.Add(_Database.CreateParameter("Vehicle", prim.VehicleParams.ToXml2()));
-            else
-                parameters.Add(_Database.CreateParameter("Vehicle", String.Empty));
 
             if (prim.DynAttrs.CountNamespaces > 0)
                 parameters.Add(_Database.CreateParameter("DynAttrs", prim.DynAttrs.ToXml()));
             else
                 parameters.Add(_Database.CreateParameter("DynAttrs", null));
-            
+
             parameters.Add(_Database.CreateParameter("PhysicsShapeType", prim.PhysicsShapeType));
             parameters.Add(_Database.CreateParameter("Density", (double)prim.Density));
             parameters.Add(_Database.CreateParameter("GravityModifier", (double)prim.GravityModifier));
             parameters.Add(_Database.CreateParameter("Friction", (double)prim.Friction));
             parameters.Add(_Database.CreateParameter("Restitution", (double)prim.Restitution));
-            parameters.Add(_Database.CreateParameter("RotationAxisLocks", Convert.ToBoolean(prim.RotationAxisLocks)));
 
             return parameters.ToArray();
         }
@@ -2321,7 +2258,6 @@ namespace OpenSim.Data.PGSQL
             parameters.Add(_Database.CreateParameter("Texture", s.TextureEntry));
             parameters.Add(_Database.CreateParameter("ExtraParams", s.ExtraParams));
             parameters.Add(_Database.CreateParameter("State", s.State));
-            parameters.Add(_Database.CreateParameter("LastAttachPoint", s.LastAttachPoint));
 
             if (null == s.Media)
             {

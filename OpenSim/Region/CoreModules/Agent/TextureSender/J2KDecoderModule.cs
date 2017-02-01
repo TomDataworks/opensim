@@ -285,7 +285,7 @@ namespace OpenSim.Region.CoreModules.Agent.TextureSender
                 // Cache Decoded layers
                 SaveFileCacheForAsset(assetID, layers);
             }
-            
+
             // Notify Interested Parties
             lock (m_notifyList)
             {
@@ -369,7 +369,8 @@ namespace OpenSim.Region.CoreModules.Agent.TextureSender
             else if (Cache != null)
             {
                 string assetName = "j2kCache_" + AssetId.ToString();
-                AssetBase layerDecodeAsset = Cache.Get(assetName);
+                AssetBase layerDecodeAsset;
+                Cache.Get(assetName, out layerDecodeAsset);
 
                 if (layerDecodeAsset != null)
                 {
